@@ -1,5 +1,5 @@
-from Secondary_functions import*
-
+import numpy as np
+import matplotlib.pyplot as plt
 """REQUIRED FUNCTIONS"""
 
 def least_squares_GD(y, tx, initial_w, max_iters, gamma):
