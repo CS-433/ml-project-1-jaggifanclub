@@ -7,8 +7,8 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma):
     # Define initial loss and weights
     loss = compute_loss_MSE(y, tx, w)
     w = initial_w
-    for n_iter in range(max_iters):                                    ''' TODO: Learning rate update ?'''
-        loss = compute_loss(y, tx, w)
+    for n_iter in range(max_iters):                                    #''' TODO: Learning rate update ?'''
+        loss = compute_loss_MSE(y, tx, w)
         gradient = compute_gradient(y, tx, w)
         w = w - gamma * gradient
 #        print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
@@ -21,7 +21,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1):
     loss = compute_loss_MSE(y, tx, w)
     w = initial_w
     for n_iter in range(max_iters):
-        generator = batch_iter(y, tx, batch_size)                      ''' TODO: A OPTIMISER ?'''
+        generator = batch_iter(y, tx, batch_size)                      #''' TODO: A OPTIMISER ?'''
         y_sub, tx_sub = next(generator)
         loss = compute_loss_MSE(y_sub, tx_sub, w)
         stoch_gradient = compute_gradient(y_sub, tx_sub, w)
