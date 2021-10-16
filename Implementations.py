@@ -147,26 +147,16 @@ def cross_validation(y, x, k_indices, k, lambda_, degree, model):
 
 """Functions used to plot losses and parameters for model selection"""
 
-def plot_lambda_vs_loss(lambdas, err_tr, err_te, err_type = 'mse'):
-    """visualization the curves of mse/accuracy."""
-    best_idx = np.argmin(err_te)
-    
-    plt.semilogx(lambdas, err_tr, marker=".", color='b', label='train error')
-    plt.semilogx(lambdas, err_te, marker=".", color='r', label='test error')
-    plt.axvline(lambdas[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best lambda')
-    plt.xlabel("lambda")
-    plt.ylabel(err_type)
-    plt.title("Best lambda selection")
-    plt.legend(loc=2)
-    plt.grid(True)
-    plt.show()
-    
 def plot_params_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse'):
-    """visualization the curves of mse/accuracy given parameter (degree, learning rate...)."""
+    """visualization the curves of mse/accuracy given parameter (degree, learning rate, lambda)."""
     best_idx = np.argmin(err_te)
     
-    plt.plot(params, err_tr, marker=".", color='b', label='train error')
-    plt.plot(params, err_te, marker=".", color='r', label='test error')
+    if param = 'lambda':
+        plt.semilogx(params, err_tr, marker=".", color='b', label='train error')
+        plt.semilogx(params, err_te, marker=".", color='r', label='test error')
+    else:
+        plt.plot(params, err_tr, marker=".", color='b', label='train error')
+        plt.plot(params, err_te, marker=".", color='r', label='test error')
     plt.axvline(params[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best degree')
     plt.xlabel(param)
     plt.ylabel(err_type)
