@@ -147,7 +147,7 @@ def cross_validation(y, x, k_indices, k, lambda_, degree, model):
 
 """Functions used to plot losses and parameters for model selection"""
 
-def plot_params_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse'):
+def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse'):
     """visualization the curves of mse/accuracy given parameter (degree, learning rate, lambda)."""
     best_idx = np.argmin(err_te)
     
@@ -157,10 +157,10 @@ def plot_params_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'ms
     else:
         plt.plot(params, err_tr, marker=".", color='b', label='train error')
         plt.plot(params, err_te, marker=".", color='r', label='test error')
-    plt.axvline(params[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best degree')
+    plt.axvline(params[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
     plt.xlabel(param)
     plt.ylabel(err_type)
-    plt.title("Best degree selection")
+    plt.title("Best " + param + " selection")
     plt.legend(loc=2)
     plt.grid(True)
     plt.show()
