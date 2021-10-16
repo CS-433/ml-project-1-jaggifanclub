@@ -161,14 +161,14 @@ def plot_lambda_vs_loss(lambdas, err_tr, err_te, err_type = 'mse'):
     plt.grid(True)
     plt.show()
     
-def plot_degree_vs_loss(degrees, err_tr, err_te, err_type = 'mse'):
-    """visualization the curves of mse/accuracy."""
+def plot_params_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse'):
+    """visualization the curves of mse/accuracy given parameter (degree, learning rate...)."""
     best_idx = np.argmin(err_te)
     
-    plt.plot(degrees, err_tr, marker=".", color='b', label='train error')
-    plt.plot(degrees, err_te, marker=".", color='r', label='test error')
-    plt.axvline(degrees[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best degree')
-    plt.xlabel("degree")
+    plt.plot(params, err_tr, marker=".", color='b', label='train error')
+    plt.plot(params, err_te, marker=".", color='r', label='test error')
+    plt.axvline(params[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best degree')
+    plt.xlabel(param)
     plt.ylabel(err_type)
     plt.title("Best degree selection")
     plt.legend(loc=2)
