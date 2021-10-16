@@ -128,19 +128,46 @@ def build_poly(x, degree):
 
 """Functions used to get training/test loss on the kth fold, for a feature x matrix of degree x, for a given model"""
 
-def cross_validation(y, x, k_indices, k, lambda_, degree, model):
+#def cross_validation(y, x, k_indices, k, lambda_, degree, model):
+    #separate line of index taken for test split
+#    train_folds = list(range(k_indices.shape[0]))
+#    train_folds.remove(k)
+#    train_idx = np.concatenate(([k_indices[fold,:] for fold in train_folds]))
+#    test_idx = k_indices[k,:]
+    # ***************************************************
+#    feat_matrix_tr = build_poly(x[train_idx], degree)
+#    feat_matrix_te = build_poly(x[test_idx], degree)
+#    y_tr = y[train_idx]
+#    y_te = y[test_idx]
+    # ***************************************************
+#    weights, loss_tr = model(y_tr, feat_matrix_tr, lambda_)
+#    loss_te = compute_mse(y_te, feat_matrix_te, weights)
+#    return loss_tr, loss_te
+
+def cross_validation(y, x, k_indices, k, model, degree = 1,
+                    lambda_ = 0, learning_rate = 0, initial_w = 0,
+                         max_iters = 0, gamma = 0, batch_size = 1):
     #separate line of index taken for test split
     train_folds = list(range(k_indices.shape[0]))
     train_folds.remove(k)
     train_idx = np.concatenate(([k_indices[fold,:] for fold in train_folds]))
     test_idx = k_indices[k,:]
-    # ***************************************************
+    
     feat_matrix_tr = build_poly(x[train_idx], degree)
     feat_matrix_te = build_poly(x[test_idx], degree)
     y_tr = y[train_idx]
     y_te = y[test_idx]
-    # ***************************************************
-    loss_tr, weights = model(y_tr, feat_matrix_tr, lambda_)
+    
+    #Use of relevant parameters given the model
+    if model = 'least_squares':
+        weights, loss_tr = least_squares(y_tr, feat_matrix_tr)
+    else if model = 'least_squares_GD':
+        weights, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma)
+    else if model = 'least_squares_SGD':
+        weights, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma, batch_size)
+    else if model = 'ridge_regression':
+        weights, loss_tr = ridge_regression(y_tr, feat_matrix_tr, lambda_)
+    
     loss_te = compute_mse(y_te, feat_matrix_te, weights)
     return loss_tr, loss_te
 
