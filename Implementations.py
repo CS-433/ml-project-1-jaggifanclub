@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from proj1_helpers import*
 """REQUIRED FUNCTIONS"""
 
 def least_squares_GD(y, tx, initial_w, max_iters, gamma):
@@ -53,7 +54,7 @@ def ridge_regression(y, tx, lambda_):
 
 """ADITIONAL FUNCTIONS"""
 
-"""Functions used to compute the loss."""
+"""Functions used to compute the loss or accuracy."""
 
 def compute_loss_MSE(y, tx, w):
     loss = 1/(2*len(y)) * np.sum((y - np.dot(tx, w))**2)
@@ -63,6 +64,8 @@ def compute_loss_MAE(y, tx, w):
     loss = 1/(len(y)) * np.sum(np.abs(y - np.dot(tx, w)))
     return loss
 
+def accuracy(y, weights, data):
+    return np.mean(y == predict_labels(weights, data))
 
 """Functions used to compute the gradient for GD/SGD."""
 
@@ -140,3 +143,41 @@ def cross_validation(y, x, k_indices, k, lambda_, degree, model):
     loss_tr, weights = model(y_tr, feat_matrix_tr, lambda_)
     loss_te = compute_mse(y_te, feat_matrix_te, weights)
     return loss_tr, loss_te
+
+
+"""Functions used to plot losses and parameters for model selection"""
+
+def plot_lambda_vs_loss(lambdas, err_tr, err_te, err_type = 'mse'):
+    """visualization the curves of mse/accuracy."""
+    best_idx = np.argmin(err_te)
+    
+    plt.semilogx(lambdas, err_tr, marker=".", color='b', label='train error')
+    plt.semilogx(lambdas, err_te, marker=".", color='r', label='test error')
+    plt.axvline(lambdas[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best lambda')
+    plt.xlabel("lambda")
+    plt.ylabel(err_type)
+    plt.title("Best lambda selection")
+    plt.legend(loc=2)
+    plt.grid(True)
+    plt.show()
+    
+def plot_degree_vs_loss(degrees, err_tr, err_te, err_type = 'mse'):
+    """visualization the curves of mse/accuracy."""
+    best_idx = np.argmin(err_te)
+    
+    plt.plot(degrees, err_tr, marker=".", color='b', label='train error')
+    plt.plot(degrees, err_te, marker=".", color='r', label='test error')
+    plt.axvline(degrees[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best degree')
+    plt.xlabel("degree")
+    plt.ylabel(err_type)
+    plt.title("Best degree selection")
+    plt.legend(loc=2)
+    plt.grid(True)
+    plt.show()
+    
+def plot_boxplot(losses, model_names, err_type = 'mse'):
+    """visualisation of the variance of models"""
+    plt.boxplot(losses, labels = model_names)
+    plt.title('Boxplot of models (' + str(np.array(losses).shape[1]) + ' folds)')
+    plt.ylabel(err_type)
+    plt.show()
