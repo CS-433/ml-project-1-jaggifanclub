@@ -56,9 +56,10 @@ def ridge_regression(y, tx, lambda_):
 
 """Functions used to compute the loss or accuracy."""
 
-def compute_loss_MSE(y, tx, w):
-    loss = 1/(2*len(y)) * np.sum((y - np.dot(tx, w))**2)
-    return loss
+def compute_loss_MSE(y, tX, w):
+    e = y.reshape(-1,1) - tX@(w.reshape(-1, 1))
+    loss_MSE = (e.T@e).item()/(2*y.size)
+    return loss_MSE
 
 def compute_loss_MAE(y, tx, w):
     loss = 1/(len(y)) * np.sum(np.abs(y - np.dot(tx, w)))
