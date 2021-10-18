@@ -119,13 +119,20 @@ def split_data(x, y, ratio, seed=1):
 
 """Functions used to build a polynomial feature of x as matrix"""
 
-def build_poly(x, degree):
-    ''' Polynomial basis functions for input data x, for j=0 up to j=degree. '''
-    x_poly = x[:,0].reshape(-1,1)
-    for param in range(1,x.shape[1]):
-        new_part = np.power(x[:,param].reshape(-1, 1), np.arange(1, degree + 1).reshape(1, -1))
-        x_poly = np.hstack((x_poly, new_part))
-    return x_poly
+def build_poly(X, degree):
+    '''
+    Polynomial basis functions for input data x.
+    If the bias column [column of ones] is not already added in x, automatic addition of the bias column.
+    :param x: data [n_samples x n_dim] or [n_samples x (n_dim+1)] if the bias is already added
+    :param degree: maximum degree computed [int]
+    :return: polynomial data [n_samples x (n_dim*degree+1)]
+    '''
+    if np.all(X[:,0]==np.ones(X.shape[0])) == False: X = np.c_[np.ones(X.shape[0]), X]
+    X_poly = X[:,0].reshape(-1,1)
+    for param in range(1,X.shape[1]):
+        new_part = np.power(X[:,param].reshape(-1, 1), np.arange(1, degree + 1).reshape(1, -1))
+        X_poly = np.hstack((X_poly, new_part))
+    return X_poly
 
 """Functions used to get training/test loss on the kth fold, for a feature x matrix of degree x, for a given model"""
 
