@@ -134,6 +134,65 @@ def build_poly(X, degree):
         X_poly = np.hstack((X_poly, new_part))
     return X_poly
 
+""" Function used to preprocess the data """
+def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
+    '''
+    Preprocessing of the data.
+    :param y: labels [n_samples]
+    :param tX: data [n_samples x n_dim]
+    :param ids: ids of samples [n_samples]
+    :param mean: if provided, mean used to standardize the data [optional: float]
+    :param std: if provided, std used to standardize the data [optional: float]
+    :param param: dict of different parameters to preprocess the data [dict]
+                  default: {'Print_info': False, 'Remove_missing': False, 'Standardization': True,
+                            'Missing_to_0': True, 'Missing_to_median': False, 'Build_poly': True,
+                            'Degree_poly': 9}
+    :return: data preprocessed (y, tX, ids, tX_mean, tX_std)
+    '''
+    if param is None: param = {}
+    if param.get('Print_info', None) is None: param.update({'Print_info': False})  # print informations about the data tX
+    if param.get('Remove_missing', None) is None: param.update({'Remove_missing': False})  # remove the samples with -999 values
+    if param.get('Standardization', None) is None: param.update({'Standardization': True})  # standardize the data
+    if param.get('Missing_to_0', None) is None: param.update({'Missing_to_0': True})  # change -999 values to 0.0
+    if param.get('Missing_to_median', None) is None: param.update({'Missing_to_median': False})  # change -999 values to the median of their features
+    if param.get('Build_poly', None) is None: param.update({'Build_poly': True})  # build polynomial data
+    if param.get('Degree_poly', None) is None: param.update({'Degree_poly': 9})  # max degree computed when building polynomial data
+    if tX.ndim == 1:
+        tX = tX.reshape((-1,1))
+
+    mat_missing = np.full(tX.shape, False)  # matrix [n_samples x n_dim] containing True when tX==-999 and False when tX!=-999
+    mat_missing[np.where(tX == -999)] = True
+    id_good = np.where(tX.min(axis=1) == -999.0, False, True)  # ids of samples without -999 values
+
+    if param['Print_info']:
+        print(f"Minimum value of X: {tX.min()}\nMaximum value of X: {tX.max()}")
+        values, counts = np.unique(tX, return_counts=True)
+        print(f"Number of -999.0 in X: {dict(zip(values, counts)).get(-999.0,0)}")
+        N_good = np.count_nonzero(id_good)
+        print(f"Number of samples without -999.0: {N_good}/{id_good.size}")
+    if param['Remove_missing']:
+        tX = tX[id_good]
+        y = y[id_good]
+        ids = ids[id_good]
+    if param['Standardization']:
+        tX_mean = mean
+        tX_std = std
+        if mean is None: tX_mean = tX.mean(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
+        if std is None: tX_std = tX.std(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
+        tX = (tX-tX_mean)/tX_std
+    if param['Missing_to_0']:
+        tX[mat_missing] = 0.0
+    if param['Missing_to_median']:
+        tX2 = tX.copy()
+        tX2[mat_missing] = np.nan
+        tX_median = np.nanmedian(tX2, axis=0)  # medians of the parameters [n_dim]
+        ind_missing = np.where(mat_missing == True)
+        tX[ind_missing] = tX_median[ind_missing[1]]
+    if param['Build_poly']:
+        tX = build_poly(tX, param['Degree_poly'])
+    return y, tX, ids, tX_mean, tX_std
+
+
 """Functions used to get training/test loss on the kth fold, for a feature x matrix of degree x, for a given model"""
 
 #def cross_validation(y, x, k_indices, k, lambda_, degree, model):
