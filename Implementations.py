@@ -173,8 +173,14 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
     if param['Standardization']:
         tX_mean = mean
         tX_std = std
-        if mean is None: tX_mean = tX.mean(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
-        if std is None: tX_std = tX.std(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
+        if int(np.__version__.split('.')[0])>=1 and int(np.__version__.split('.')[1])>=20:
+            if mean is None: tX_mean = tX.mean(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
+            if std is None: tX_std = tX.std(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
+        else:
+            tX2 = tX.copy()
+            tX2[mat_missing] = np.nan
+            if mean is None: tX_mean = np.nanmean(tX2, axis=0).reshape(1,-1)
+            if std is None: tX_std = np.nanstd(tX2, axis=0).reshape(1,-1)
         tX = (tX-tX_mean)/tX_std
     if param['Missing_to_0']:
         tX[mat_missing] = 0.0
