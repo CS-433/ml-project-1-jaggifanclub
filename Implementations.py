@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from proj1_helpers import*
-"""REQUIRED FUNCTIONS"""
+
+""""""""""""""""""""""""
+"  REQUIRED FUNCTIONS  "
+""""""""""""""""""""""""
 
 def least_squares_GD(y, tx, initial_w, max_iters, gamma):
     """Gradient descent algorithm using MSE loss."""
@@ -33,7 +36,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1):
     return w, loss
 
 def least_squares(y, tx):
-    """calculate the least squares solution."""
+    """Calculates the least squares solution."""
     a = tx.T.dot(tx)
     b = tx.T.dot(y)
     w = np.linalg.solve(a,b)
@@ -41,7 +44,7 @@ def least_squares(y, tx):
     return w, loss
 
 def ridge_regression(y, tx, lambda_):
-    """implement ridge regression."""
+    """Calculates the least squares solution with ridge constrain."""
     a = tx.T.dot(tx) + 2*len(y)*lambda_*np.eye(len(tx.T))
     b = tx.T.dot(y)
     w = np.linalg.solve(a,b)
@@ -51,34 +54,38 @@ def ridge_regression(y, tx, lambda_):
 
 
 
-
-"""ADITIONAL FUNCTIONS"""
-
-"""Functions used to compute the loss or accuracy."""
+""""""""""""""""""""""""
+" ADDITIONAL FUNCTIONS "
+""""""""""""""""""""""""
 
 def compute_loss_MSE(y, tX, w):
+    """Computes MSE"""
     e = y.reshape(-1,1) - tX@(w.reshape(-1, 1))
     loss_MSE = (e.T@e).item()/(2*y.size)
     return loss_MSE
 
 def compute_loss_MAE(y, tx, w):
+    """Computes MAE"""
     loss = 1/(len(y)) * np.sum(np.abs(y - np.dot(tx, w)))
     return loss
 
 def accuracy(y, weights, data):
+    """Computes accuracy"""
     return np.mean(y == predict_labels(weights, data))
-
-"""Functions used to compute the gradient for GD/SGD."""
 
 def compute_gradient(y, tx, w):
     e = y - np.dot(tx, w)                        #dim = n
     gradient = -1/len(y)  *  np.dot(tx.T, e)     #dim = d
     return gradient
 
-
-"""Functions used to create mini-batches during GD/SGD."""
+def compute_gradient(y, tx, w):
+    """Computes gradient for (stochastic) gradient descent"""
+    e = y - np.dot(tx, w)                        #dim = n
+    gradient = -1/len(y)  *  np.dot(tx.T, e)     #dim = d
+    return gradient
 
 def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
+    """Create mini-batches during GD/SGD."""
     data_size = len(y)
 
     if shuffle:
@@ -94,10 +101,8 @@ def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
         if start_index != end_index:
             yield shuffled_y[start_index:end_index], shuffled_tx[start_index:end_index]
 
-
-"""Functions used to split the data into 2 sets."""
-
 def split_data(x, y, ratio, seed=1):
+    """Splits the data into 2 sets."""
     # set seed
     np.random.seed(seed)
     
@@ -116,9 +121,6 @@ def split_data(x, y, ratio, seed=1):
     
     return x_train, y_train, x_test, y_test
 
-
-"""Functions used to build a polynomial feature of x as matrix"""
-
 def build_poly(X, degree):
     '''
     Polynomial basis functions for input data x.
@@ -134,7 +136,6 @@ def build_poly(X, degree):
         X_poly = np.hstack((X_poly, new_part))
     return X_poly
 
-""" Function used to preprocess the data """
 def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
     '''
     Preprocessing of the data.
@@ -192,9 +193,6 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
         tX = build_poly(tX, param['Degree_poly'])
     return y, tX, ids, tX_mean, tX_std
 
-
-"""Functions used to get training/test loss on the kth fold, for a feature x matrix of degree x, for a given model"""
-
 #def cross_validation(y, x, k_indices, k, lambda_, degree, model):
     #separate line of index taken for test split
 #    train_folds = list(range(k_indices.shape[0]))
@@ -211,16 +209,17 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
 #    loss_te = compute_mse(y_te, feat_matrix_te, weights)
 #    return loss_tr, loss_te
 
-def cross_validation(y, x, k_indices, k, model, degree = 1,
-                    lambda_ = 0, learning_rate = 0, initial_w = 0,
-                         max_iters = 0, gamma = 0, batch_size = 1):
+def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0,
+                     initial_w = 0, max_iters = 0, gamma = 0, batch_size = 1):
+    """Functions used to get training/test loss on the kth fold during cross-validation,
+    for specific parameter values, for a given model"""
     #separate line of index taken for test split
     train_folds = list(range(k_indices.shape[0]))
     train_folds.remove(k)
     train_idx = np.concatenate(([k_indices[fold,:] for fold in train_folds]))
     test_idx = k_indices[k,:]
     
-    feat_matrix_tr = build_poly(x[train_idx], degree)
+    feat_matrix_tr = build_poly(x[train_idx], degree) #VERIFY IT WORKS FOR DEGREE = 1
     feat_matrix_te = build_poly(x[test_idx], degree)
     y_tr = y[train_idx]
     y_te = y[test_idx]
@@ -238,11 +237,8 @@ def cross_validation(y, x, k_indices, k, model, degree = 1,
     loss_te = compute_mse(y_te, feat_matrix_te, weights)
     return loss_tr, loss_te
 
-
-"""Functions used to plot losses and parameters for model selection"""
-
 def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse'):
-    """visualization the curves of mse/accuracy given parameter (degree, learning rate, lambda)."""
+    """Visualization of the curves of mse/accuracy given parameter (degree, learning rate, lambda)."""
     best_idx = np.argmin(err_te)
     
     if param = 'lambda':
