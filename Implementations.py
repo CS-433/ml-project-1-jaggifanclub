@@ -205,7 +205,7 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
 #    return loss_tr, loss_te
 
 def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0,
-                     initial_w = 0, max_iters = 0, gamma = 0, batch_size = 1): #CONDENSE THE LIST OF PARAMETERS LIKE IN PREPROCESS_DATA
+                     initial_w = 0, max_iters = 0, gamma = 0, batch_size = 1): #CONDENSE THE LIST OF PARAMETERS LIKE IN PREPROCESS_DATA, VOIR JEUDI
     """Functions used to get training/test loss on the kth fold during cross-validation,
     for specific parameter values, for a given model"""
     #separate line of index taken for test split
@@ -220,19 +220,20 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0,
     y_te = y[test_idx]
     
     #Use of relevant parameters given the model
-    if model = 'least_squares':
+    if model == 'least_squares':
         weights, loss_tr = least_squares(y_tr, feat_matrix_tr)
-    else if model = 'least_squares_GD':
+    elif model == 'least_squares_GD':
         weights, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma)
-    else if model = 'least_squares_SGD':
+    elif model == 'least_squares_SGD':
         weights, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma, batch_size)
-    else if model = 'ridge_regression':
+    elif model == 'ridge_regression':
         weights, loss_tr = ridge_regression(y_tr, feat_matrix_tr, lambda_)
     
     loss_te = compute_mse(y_te, feat_matrix_te, weights)
+    # POSSIBLY COMPUTE TRAIN/TEST ACCURACIES AND RETURN
     return loss_tr, loss_te
 
-def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse'):
+def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'MSE', model_name = 'model'):
     """
     Visualization of the curves of mse/accuracy given parameter (degree, learning rate, lambda).
      :param params: list of the parameters used for each version of the model
@@ -240,10 +241,11 @@ def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse
      :param err_te: corresponding test error, whether mse or accuracy
      :param param: label of the parameter used
      :param err_type: type of error (mse or accuracy)
+     :param model_name: name of the model used
     """
     best_idx = np.argmin(err_te)
     
-    if param = 'lambda':
+    if param == 'lambda':
         plt.semilogx(params, err_tr, marker=".", color='b', label='train error')
         plt.semilogx(params, err_te, marker=".", color='r', label='test error')
     else:
@@ -252,18 +254,76 @@ def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse
     plt.axvline(params[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
     plt.xlabel(param)
     plt.ylabel(err_type)
-    plt.title("Best " + param + " selection")
-    plt.legend(loc=2)
+    plt.title(err_type + ' of ' + model_name + ' given different values for parameter: ' + param)
+    plt.legend()
     plt.grid(True)
     plt.show()
+
+def plot_param_vs_losses(params, mse_tr, mse_te, acc_tr, acc_te, param = 'degree', model_name = 'model'):
+    """
+    Visualization of the curves of mse AND accuracy given parameter (degree, learning rate, lambda).
+     :param params: list of the parameters used for each version of the model
+     :param mse_tr: corresponding training mse
+     :param mse_te: corresponding test mse
+     :param acc_tr: corresponding training accuracy
+     :param acc_te: corresponding test accuracy
+     :param param: label of the parameter used
+     :param model_name: name of the model used
+    """
     
-def plot_boxplot(losses, model_names, err_type = 'mse'):
-    """visualisation of the variance of models
-     :param losses: array of losses, such that each row contains the losses of a same model on different folds (cross-validation)
+    best_idx_mse = np.argmin(mse_te)
+    best_idx_acc = np.argmin(acc_te)
+    
+    fig, axs = plt.subplots(1, 2, figsize = [12,5])
+    fig.suptitle('MSE and accuracy of ' + model_name + ' given different values for parameter: ' + param)
+    if param == 'lambda':
+        axs[0].semilogx(params, mse_tr, marker=".", color='b', label='train error')
+        axs[0].semilogx(params, mse_te, marker=".", color='r', label='test error')
+        axs[1].semilogx(params, acc_tr, marker=".", color='b')
+        axs[1].semilogx(params, acc_te, marker=".", color='r')    
+    else:
+        axs[0].plot(params, mse_tr, marker=".", color='b', label='train error')
+        axs[0].plot(params, mse_te, marker=".", color='r', label='test error')
+        axs[1].plot(params, acc_tr, marker=".", color='b')
+        axs[1].plot(params, acc_te, marker=".", color='r')
+    axs[0].axvline(params[best_idx_mse], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
+    axs[1].axvline(params[best_idx_acc], color = 'k', ls = '--', alpha = 0.5)
+    
+    axs[0].set_xlabel(param)
+    axs[1].set_xlabel(param)
+    axs[0].set_ylabel('MSE')
+    axs[1].set_ylabel('Accuracy')
+    axs[0].grid(True)
+    axs[1].grid(True)
+    fig.legend()
+    plt.show()
+    
+def plot_boxplot(losses, model_names, err_type = 'MSE'):
+    """Visualisation of the performance of models across folds.
+     :param losses: array of losses, such that each ROW contains the losses of a same model on different folds (cross-validation)
      :param model_names: names of the models corresponding to each row
      :param err_type: type of error (mse or accuracy)
     """
-    plt.boxplot(losses, labels = model_names)
-    plt.title('Boxplot of models (' + str(np.array(losses).shape[1]) + ' folds)')
+    losses = losses.T
+    bp = plt.boxplot(losses, labels = model_names, showmeans = True)
+    plt.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
+    plt.title('Boxplot of the ' + err_type + ' models (' + str(np.array(losses).shape[1]) + ' folds)')
     plt.ylabel(err_type)
+    plt.show()
+    
+def plot_twice_boxplot(MSEs, accuracies, model_names):
+    """Visualisation of the performance of models across folds.
+     :param MSEs: array of MSEs. Each ROW contains the MSE of a same model on different folds (cross-validation)
+     :param accuracies: array of accuraciess. Each ROW contains the accuracy of a same model on different folds (cross-validation)
+     :param model_names: names of the models corresponding to each row
+    """
+    MSEs = MSEs.T
+    accuracies = accuracies.T
+    fig, axs = plt.subplots(1, 2, figsize = [12,5])
+    fig.suptitle('Boxplot of the MSE and accuracy of models (' + str(np.array(MSEs).shape[1]) + ' folds)')
+    axs[0].boxplot(MSEs, labels = model_names, showmeans = True)
+    axs[0].set_ylabel('MSE')
+    bp = axs[1].boxplot(accuracies, labels = model_names, showmeans = True)
+    axs[1].set_ylabel('Accuracy')
+    fig.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
     plt.show()
