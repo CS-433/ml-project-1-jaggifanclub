@@ -74,11 +74,6 @@ def accuracy(y, weights, data):
     return np.mean(y == predict_labels(weights, data))
 
 def compute_gradient(y, tx, w):
-    e = y - np.dot(tx, w)                        #dim = n
-    gradient = -1/len(y)  *  np.dot(tx.T, e)     #dim = d
-    return gradient
-
-def compute_gradient(y, tx, w):
     """Computes gradient for (stochastic) gradient descent"""
     e = y - np.dot(tx, w)                        #dim = n
     gradient = -1/len(y)  *  np.dot(tx.T, e)     #dim = d
@@ -210,7 +205,7 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
 #    return loss_tr, loss_te
 
 def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0,
-                     initial_w = 0, max_iters = 0, gamma = 0, batch_size = 1):
+                     initial_w = 0, max_iters = 0, gamma = 0, batch_size = 1): #CONDENSE THE LIST OF PARAMETERS LIKE IN PREPROCESS_DATA
     """Functions used to get training/test loss on the kth fold during cross-validation,
     for specific parameter values, for a given model"""
     #separate line of index taken for test split
@@ -238,7 +233,14 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0,
     return loss_tr, loss_te
 
 def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse'):
-    """Visualization of the curves of mse/accuracy given parameter (degree, learning rate, lambda)."""
+    """
+    Visualization of the curves of mse/accuracy given parameter (degree, learning rate, lambda).
+     :param params: list of the parameters used for each version of the model
+     :param err_tr: corresponding training error, whether mse or accuracy
+     :param err_te: corresponding test error, whether mse or accuracy
+     :param param: label of the parameter used
+     :param err_type: type of error (mse or accuracy)
+    """
     best_idx = np.argmin(err_te)
     
     if param = 'lambda':
@@ -256,7 +258,11 @@ def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'mse
     plt.show()
     
 def plot_boxplot(losses, model_names, err_type = 'mse'):
-    """visualisation of the variance of models"""
+    """visualisation of the variance of models
+     :param losses: array of losses, such that each row contains the losses of a same model on different folds (cross-validation)
+     :param model_names: names of the models corresponding to each row
+     :param err_type: type of error (mse or accuracy)
+    """
     plt.boxplot(losses, labels = model_names)
     plt.title('Boxplot of models (' + str(np.array(losses).shape[1]) + ' folds)')
     plt.ylabel(err_type)
