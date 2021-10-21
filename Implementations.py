@@ -9,8 +9,8 @@ from proj1_helpers import*
 def least_squares_GD(y, tx, initial_w, max_iters, gamma):
     """Gradient descent algorithm using MSE loss."""
     # Define initial loss and weights
-    loss = compute_loss_MSE(y, tx, w)
     w = initial_w
+    loss = compute_loss_MSE(y, tx, w)
     for n_iter in range(max_iters):                                    #''' TODO: Learning rate update ?'''
         loss = compute_loss_MSE(y, tx, w)
         gradient = compute_gradient(y, tx, w)
@@ -22,8 +22,8 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma):
 def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1):
     """Stochastic gradient descent algorithm using MSE loss."""
     # Define parameters to store w and loss
-    loss = compute_loss_MSE(y, tx, w)
     w = initial_w
+    loss = compute_loss_MSE(y, tx, w)
     for n_iter in range(max_iters):
         generator = batch_iter(y, tx, batch_size)                      #''' TODO: A OPTIMISER ?'''
         y_sub, tx_sub = next(generator)
@@ -72,6 +72,8 @@ def compute_loss_MAE(y, tx, w):
 def accuracy(y, weights, data):
     """Computes accuracy"""
     return np.mean(y == predict_labels(weights, data))
+
+#put compute_accuracy or accuracy ? 
 
 def compute_gradient(y, tx, w):
     """Computes gradient for (stochastic) gradient descent"""
@@ -194,6 +196,24 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
         tX = build_poly(tX, param['Degree_poly'])
     return y, tX, ids, tX_mean, tX_std
 
+def build_k_indices(y, k_fold, seed):
+    '''
+    Building k indices for k_fold cross validation.
+    :param y: labels [n_samples]
+    :param k_fold: number of folds for cross validation
+    :param seed: fixed seed for reproducibility of the data (random permutations for indices)
+    :return: an array of k_indices
+    '''
+    num_row = y.shape[0]
+    interval = int(num_row / k_fold)
+    #print(interval)
+    np.random.seed(seed)
+    indices = np.random.permutation(num_row)
+    #print(indices)
+    k_indices = [indices[k * interval: (k + 1) * interval] #end pas inclus
+                 for k in range(k_fold)]
+    return np.array(k_indices)
+
 #def cross_validation(y, x, k_indices, k, lambda_, degree, model):
     #separate line of index taken for test split
 #    train_folds = list(range(k_indices.shape[0]))
@@ -210,8 +230,7 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
 #    loss_te = compute_mse(y_te, feat_matrix_te, weights)
 #    return loss_tr, loss_te
 
-def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0,
-                     initial_w = 0, max_iters = 0, gamma = 0, batch_size = 1): #CONDENSE THE LIST OF PARAMETERS LIKE IN PREPROCESS_DATA, VOIR JEUDI
+def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0, max_iters = 0, gamma = 0, batch_size = 1): #CONDENSE THE LIST OF PARAMETERS LIKE IN PREPROCESS_DATA, VOIR JEUDI
     """Functions used to get training/test loss on the kth fold during cross-validation,
     for specific parameter values, for a given model"""
     #separate line of index taken for test split
@@ -224,7 +243,8 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0,
     feat_matrix_te = build_poly(x[test_idx], degree)
     y_tr = y[train_idx]
     y_te = y[test_idx]
-    
+    #initialize the vector of weights to the number of features of the training data set for least squares GD
+    initial_w=np.zeros(feat_matrix_tr.shape[1])
     #Use of relevant parameters given the model
     if model == 'least_squares':
         weights, loss_tr = least_squares(y_tr, feat_matrix_tr)
@@ -235,9 +255,48 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0,
     elif model == 'ridge_regression':
         weights, loss_tr = ridge_regression(y_tr, feat_matrix_tr, lambda_)
     
-    loss_te = compute_mse(y_te, feat_matrix_te, weights)
+    loss_te = compute_loss_MSE(y_te, feat_matrix_te, weights)
     # POSSIBLY COMPUTE TRAIN/TEST ACCURACIES AND RETURN
     return loss_tr, loss_te
+
+"""Function that choses the best learning rate for either GD or SGD"""
+
+def learning_rate_optimization(y, x, degrees, k_fold, gammas, max_iters, model, seed=1, batch_size=1):
+    '''
+    Optimization of the learning rate gamma among various degrees for GD or SGD
+    :param y: labels [n_samples]
+    :param x: data [n_samples x n_dim]
+    :param degrees: a list of degrees to test for the best model
+    :param k_fold: number of folds for cross validation
+    :param gammas: a list of learning rate to test, usually ranging from 0.1 to 2
+    :param max_iters: the number of iterations
+    :param model: model chosen, either 'least_squares_GD' or 'least_squares_SGD'
+    :param seed: fixed seed for code reproducibility, by default, 1
+    :param batch_size: the size of batch if using batch gradient descent, by default 1
+    :return: the best learning rate, gamma and degree for gradient descent (best_gamma, best_degree, best_rmse)
+    '''
+    #split data in k_fold:
+    k_indices=build_k_indices(y, k_fold, seed)
+    # for each degree, compute the best learning rate and associated rmse:
+    best_gammas = []
+    best_rmse = []
+    # varying degree:
+    for degree in degrees:
+        #and then performing cross-validation:
+        test_rmse=[]
+        for gamma in gammas:
+            test_rmse_tab = []
+            for k in range(k_fold):
+                _, loss_te = cross_validation(y, x, k_indices, k, 'least_squares_GD', degree, max_iters=max_iters, gamma=gamma, batch_size=batch_size)
+                test_rmse_tab.append(loss_te)
+            test_rmse.append(np.mean(test_rmse_tab))
+        ind=np.argmin(test_rmse)
+        best_gammas.append(gammas[ind])
+        best_rmse.append(test_rmse[ind])
+    best_degree=np.argmin(best_rmse)
+    return degrees[best_degree], best_gammas[best_degree], best_rmse[best_degree]
+                                                                     
+"""Functions used to plot losses and parameters for model selection"""                                                                     
 
 def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'MSE', model_name = 'model'):
     """
