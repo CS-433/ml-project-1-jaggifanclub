@@ -51,7 +51,11 @@ def ridge_regression(y, tx, lambda_):
     loss = compute_loss_MSE(y, tx, w)
     return w, loss
 
+def logistic_regression():
+    return None
 
+def reg_logistic_regression():
+    return None
 
 
 """"""""""""""""""""""""
@@ -64,16 +68,15 @@ def compute_loss_MSE(y, tX, w):
     loss_MSE = (e.T@e).item()/(2*y.size)
     return loss_MSE
 
-def compute_loss_MAE(y, tx, w):
-    """Computes MAE"""
-    loss = 1/(len(y)) * np.sum(np.abs(y - np.dot(tx, w)))
+def compute_loss_NLL(y, tx, w):
+    """compute the loss: negative log likelihood."""
+    sig = sigmoid(tx.dot(w))
+    loss = - np.sum( y*np.log(sig)  +  (1 - y) * np.log(1-sig) )
     return loss
 
-def accuracy(y, weights, data):
+def compute_accuracy(y, tx, w):
     """Computes accuracy"""
-    return np.mean(y == predict_labels(weights, data))
-
-#put compute_accuracy or accuracy ? 
+    return np.mean(y == predict_labels(w, tx))
 
 def compute_gradient(y, tx, w):
     """Computes gradient for (stochastic) gradient descent"""
@@ -230,72 +233,164 @@ def build_k_indices(y, k_fold, seed):
 #    loss_te = compute_mse(y_te, feat_matrix_te, weights)
 #    return loss_tr, loss_te
 
-def cross_validation(y, x, k_indices, k, model, degree = 1, lambda_ = 0, max_iters = 0, gamma = 0, batch_size = 1): #CONDENSE THE LIST OF PARAMETERS LIKE IN PREPROCESS_DATA, VOIR JEUDI
-    """Functions used to get training/test loss on the kth fold during cross-validation,
-    for specific parameter values, for a given model"""
-    #separate line of index taken for test split
+def cross_validation(y, x, k_indices, k, model, degree = 1, params = None):
+    """
+    Function used to get training/test loss and accuracy on the kth fold during cross-validation,
+    for specific parameter values, for a given model
+    :param y: labels
+    :param x: data
+    :param k_indices: array of indices contained by each fold
+    :param k: fold number used as test set
+    :param model: model name
+    :param degree: degree up to which each parameter will get extended features
+    :param params: dictionnary containing parameters relevant among {max_iters, gamma, batch_size, lambda} for the chosen model
+    """
+    #Recap of the arguments entered as the function is heavy in parameters
+    print('Starting cross-validation {}/{} for {}, extended feature of degree {} and arguments : {}'.format(k+1, len(k_indices), model, degree, params))
+    
+    #Create k-th split of train/test sets, possibly with extended features
     train_folds = list(range(k_indices.shape[0]))
     train_folds.remove(k)
     train_idx = np.concatenate(([k_indices[fold,:] for fold in train_folds]))
     test_idx = k_indices[k,:]
     
-    feat_matrix_tr = build_poly(x[train_idx], degree) #VERIFY IT WORKS FOR DEGREE = 1
+    feat_matrix_tr = build_poly(x[train_idx], degree)
     feat_matrix_te = build_poly(x[test_idx], degree)
     y_tr = y[train_idx]
     y_te = y[test_idx]
-    #initialize the vector of weights to the number of features of the training data set for least squares GD
-    initial_w=np.zeros(feat_matrix_tr.shape[1])
-    #Use of relevant parameters given the model
-    if model == 'least_squares':
-        weights, loss_tr = least_squares(y_tr, feat_matrix_tr)
-    elif model == 'least_squares_GD':
-        weights, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma)
-    elif model == 'least_squares_SGD':
-        weights, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma, batch_size)
-    elif model == 'ridge_regression':
-        weights, loss_tr = ridge_regression(y_tr, feat_matrix_tr, lambda_)
     
-    loss_te = compute_loss_MSE(y_te, feat_matrix_te, weights)
-    # POSSIBLY COMPUTE TRAIN/TEST ACCURACIES AND RETURN
-    return loss_tr, loss_te
+    #Use model given in parameter and initialize relevant parameters
+    if model == 'least_squares':
+        w, loss_tr = least_squares(y_tr, feat_matrix_tr)
+        
+    elif model == 'least_squares_GD':
+        max_iters, gamma = params['max_iters'], params['gamma']
+        initial_w=np.zeros(feat_matrix_tr.shape[1])
+        w, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma)
+    
+    elif model == 'least_squares_SGD':
+        max_iters, gamma, batch_size = params['max_iters'], params['gamma'], params['batch_size']
+        initial_w=np.zeros(feat_matrix_tr.shape[1])
+        w, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma, batch_size)
+    
+    elif model == 'ridge_regression':
+        lambda_ = params['lambda']
+        w, loss_tr = ridge_regression(y_tr, feat_matrix_tr, lambda_)
+    
+    elif model == 'logistic_regression':
+        max_iters, gamma = params['max_iters'], params['gamma']
+        initial_w=np.zeros(feat_matrix_tr.shape[1])
+        w, loss_tr = logistic_regression(y_tr, feat_matrix_tr, initial_w, max_iters, gamma)
+        
+    
+    elif model == 'ref_logistic_regression':
+        lambda_, max_iters, gamma = params['lambda'], params['max_iters'], params['gamma']
+        w, loss_tr = reg_logistic_regression(y_tr, feat_matrix_tr, lambda_, initial_w, max_iters, gamma)
+    
+    else:
+        print('Model choice incorrect, execution halted.')
+        exit()
+    
+    #MSE returned for comparison purposes, but accuracy is used as model evaluator
+    if model == 'logistic_regression' or model == 'reg_logistic_regression':
+        loss_te = compute_loss_NLL(y_te, feat_matrix_te, w)
+    else:
+        loss_te = compute_loss_MSE(y_te, feat_matrix_te, w)
 
-"""Function that choses the best learning rate for either GD or SGD"""
+    acc_tr = compute_accuracy(y_tr, feat_matrix_tr, w)
+    acc_te = compute_accuracy(y_te, feat_matrix_te, w)
+    return loss_tr, loss_te, acc_tr, acc_te
 
-def learning_rate_optimization(y, x, degrees, k_fold, gammas, max_iters, model, seed=1, batch_size=1):
+# def learning_rate_optimization(y, x, degrees, k_fold, gammas, max_iters, model, seed=1, batch_size=1):
+#     '''
+#     Optimization of the learning rate gamma among various degrees for GD or SGD
+#     :param y: labels [n_samples]
+#     :param x: data [n_samples x n_dim]
+#     :param degrees: a list of degrees to test for the best model
+#     :param k_fold: number of folds for cross validation
+#     :param gammas: a list of learning rate to test, usually ranging from 0.1 to 2
+#     :param max_iters: the number of iterations
+#     :param model: model chosen, either 'least_squares_GD' or 'least_squares_SGD'
+#     :param seed: fixed seed for code reproducibility, by default, 1
+#     :param batch_size: the size of batch if using batch gradient descent, by default 1
+#     :return: the best learning rate, gamma and degree for gradient descent (best_gamma, best_degree, best_rmse)
+#     '''
+#     #split data in k_fold:
+#     k_indices=build_k_indices(y, k_fold, seed)
+#     # for each degree, compute the best learning rate and associated rmse:
+#     best_gammas = []
+#     best_rmse = []
+#     # varying degree:
+#     for degree in degrees:
+#         #and then performing cross-validation:
+#         test_rmse=[]
+#         for gamma in gammas:
+#             test_rmse_tab = []
+#             for k in range(k_fold):
+#                 _, loss_te = cross_validation(y, x, k_indices, k, 'least_squares_GD', degree, max_iters=max_iters, gamma=gamma, batch_size=batch_size)
+#                 test_rmse_tab.append(loss_te)
+#             test_rmse.append(np.mean(test_rmse_tab))
+#         ind=np.argmin(test_rmse)
+#         best_gammas.append(gammas[ind])
+#         best_rmse.append(test_rmse[ind])
+#     best_degree=np.argmin(best_rmse)
+#     return degrees[best_degree], best_gammas[best_degree], best_rmse[best_degree]
+
+def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = None, seed = 1): #gammas, max_iters, batch_size, lambda
     '''
-    Optimization of the learning rate gamma among various degrees for GD or SGD
+    Optimization of parameters degree and possibly lambda
     :param y: labels [n_samples]
     :param x: data [n_samples x n_dim]
     :param degrees: a list of degrees to test for the best model
+    :param lambdas: a list of ridge regularizer to test for the best model
     :param k_fold: number of folds for cross validation
-    :param gammas: a list of learning rate to test, usually ranging from 0.1 to 2
-    :param max_iters: the number of iterations
     :param model: model chosen, either 'least_squares_GD' or 'least_squares_SGD'
+    :param params: dictionnary of aditional parameters necessary for the model chosen
     :param seed: fixed seed for code reproducibility, by default, 1
-    :param batch_size: the size of batch if using batch gradient descent, by default 1
-    :return: the best learning rate, gamma and degree for gradient descent (best_gamma, best_degree, best_rmse)
+    :return: if lambda also optimized, 2 matrix of accuracies (train, test) (degree x lambda) for each degree-lambda combination
+             if only degree optimized, 2 vectors of accuracies (train, test) (dim = degree) for each degree
     '''
     #split data in k_fold:
-    k_indices=build_k_indices(y, k_fold, seed)
-    # for each degree, compute the best learning rate and associated rmse:
-    best_gammas = []
-    best_rmse = []
-    # varying degree:
-    for degree in degrees:
-        #and then performing cross-validation:
-        test_rmse=[]
-        for gamma in gammas:
-            test_rmse_tab = []
-            for k in range(k_fold):
-                _, loss_te = cross_validation(y, x, k_indices, k, 'least_squares_GD', degree, max_iters=max_iters, gamma=gamma, batch_size=batch_size)
-                test_rmse_tab.append(loss_te)
-            test_rmse.append(np.mean(test_rmse_tab))
-        ind=np.argmin(test_rmse)
-        best_gammas.append(gammas[ind])
-        best_rmse.append(test_rmse[ind])
-    best_degree=np.argmin(best_rmse)
-    return degrees[best_degree], best_gammas[best_degree], best_rmse[best_degree]
-                                                                     
+    k_indices = build_k_indices(y, k_fold, seed)
+    accs_tr = []
+    accs_te = []
+    
+    if lambdas is None:          
+    # Get a mean accuracy value for each degree only
+        for degree in degrees:
+                degree_accs_tr = []
+                degree_accs_te = []
+                for k in range(k_fold):
+                    _, __, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params)
+                    degree_accs_tr.append(acc_tr)
+                    degree_accs_te.append(acc_te)
+                accs_tr.append(np.mean(lambda_accs_tr))
+                accs_te.append(np.mean(lambda_accs_te))
+    else:
+    # Get a mean accuracy value (by cross-validation) for each degree-lambda combination
+        for degree in degrees:
+            degrees_accs_tr = []
+            degrees_accs_te = []
+            for lambda_ in lambdas:
+                lambda_accs_tr = []
+                lambda_accs_te = []
+                # Adapt dictionary for cross_validation function
+                if params is None:
+                    dict_ = {'lambda' : lambda_}
+                    params = dict_
+                else: params['lambda'] = lambda_
+                #start cross-validating on degree-lambda pair
+                for k in range(k_fold):
+                    _, __, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params)
+                    lambda_accs_tr.append(acc_tr)
+                    lambda_accs_te.append(acc_te)
+                degrees_accs_tr.append(np.mean(lambda_accs_tr))
+                degrees_accs_te.append(np.mean(lambda_accs_te))
+            accs_tr.append(degrees_accs_tr)
+            accs_te.append(degrees_accs_te)
+              
+    return np.array(accs_tr), np.array(accs_te)
+              
 """Functions used to plot losses and parameters for model selection"""                                                                     
 
 def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'MSE', model_name = 'model'):
@@ -391,4 +486,43 @@ def plot_twice_boxplot(MSEs, accuracies, model_names):
     bp = axs[1].boxplot(accuracies, labels = model_names, showmeans = True)
     axs[1].set_ylabel('Accuracy')
     fig.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
+    plt.show()
+    
+def plot_heatmap(losses_tr, losses_te, degrees, lambdas, model_name):
+    fig, axs = plt.subplots(1, 2, figsize = [12,5])
+    fig.suptitle('Accuracy of ' + model_name + ' given different values for parameter lambda and degree.')
+    im0 = axs[0].imshow(losses_tr)
+    im1 = axs[1].imshow(losses_te)
+    
+
+    # We want to show all ticks...
+    axs[0].set_xticks(np.arange(len(lambdas)))
+    axs[0].set_yticks(np.arange(len(degrees)))
+    # ... and label them with the respective list entries
+    axs[0].set_xticklabels(lambdas)
+    axs[0].set_yticklabels(degrees)
+    
+    axs[1].set_xticks(np.arange(len(lambdas)))
+    axs[1].set_yticks(np.arange(len(degrees)))
+    # ... and label them with the respective list entries
+    axs[1].set_xticklabels(lambdas)
+    axs[1].set_yticklabels(degrees)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(axs[0].get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    plt.setp(axs[1].get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+
+    # Loop over data dimensions and create text annotations.
+    for i in range(len(degrees)):
+        for j in range(len(lambdas)):
+            text = axs[0].text(j, i, losses_tr[i, j],
+                           ha="center", va="center", color="w")
+            text = axs[1].text(j, i, losses_te[i, j],
+                           ha="center", va="center", color="w")
+
+    axs[0].set_title("Train accuracy")
+    axs[1].set_title("Test accuracy")
+    fig.tight_layout()
     plt.show()
