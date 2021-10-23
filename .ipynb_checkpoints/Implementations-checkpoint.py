@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from proj1_helpers import*
+import os.path
 
 """"""""""""""""""""""""
 "  REQUIRED FUNCTIONS  "
@@ -217,7 +218,7 @@ def build_k_indices(y, k_fold, seed):
                  for k in range(k_fold)]
     return np.array(k_indices)
 
-def cross_validation(y, x, k_indices, k, model, degree = 1, params = None):
+def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedback = False):
     """
     Function used to get training/test loss and accuracy on the kth fold during cross-validation,
     for specific parameter values, for a given model
@@ -228,9 +229,11 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None):
     :param model: model name
     :param degree: degree up to which each parameter will get extended features
     :param params: dictionnary containing parameters relevant among {max_iters, gamma, batch_size, lambda} for the chosen model
+    :param feedback: enables feedback of cross-validation progression
     """
     #Recap of the arguments entered as the function is heavy in parameters
-    print('Starting cross-validation {}/{} for {}, extended feature of degree {} and arguments : {}'.format(k+1, len(k_indices), model, degree, params))
+    if feedback:
+        print('Starting cross-validation {}/{} for {}, extended feature of degree {} and arguments : {}'.format(k+1, len(k_indices), model, degree, params))
     
     #Create k-th split of train/test sets, possibly with extended features
     train_folds = list(range(k_indices.shape[0]))
@@ -320,19 +323,20 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None):
 #     best_degree=np.argmin(best_rmse)
 #     return degrees[best_degree], best_gammas[best_degree], best_rmse[best_degree]
 
-def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = None, seed = 1): #gammas, max_iters, batch_size, lambda
+def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = None, seed = 1, feedback = False): #gammas, max_iters, batch_size, lambda
     '''
     Optimization of parameters degree and possibly lambda
     :param y: labels [n_samples]
     :param x: data [n_samples x n_dim]
-    :param degrees: a list of degrees to test for the best model
-    :param lambdas: a list of ridge regularizer to test for the best model
     :param k_fold: number of folds for cross validation
     :param model: model chosen, either 'least_squares_GD' or 'least_squares_SGD'
+    :param degrees: a list of degrees to test for the best model
+    :param lambdas: a list of ridge regularizer to test for the best model
     :param params: dictionnary of aditional parameters necessary for the model chosen
     :param seed: fixed seed for code reproducibility, by default, 1
-    :return: if lambda also optimized, 2 matrix of accuracies (train, test) (degree x lambda) for each degree-lambda combination
-             if only degree optimized, 2 vectors of accuracies (train, test) (dim = degree) for each degree
+    :param feedback: enables feedback of cross-validation progression
+    :return: if lambda also optimized, 4 matrix of loss and accuracies (train, test) (degree x lambda) for each degree-lambda combination
+             if only degree optimized, 4 vectors of loss and accuracies (train, test) (dim = degree) for each degree
     '''
     #split data in k_fold:
     k_indices = build_k_indices(y, k_fold, seed)
@@ -344,25 +348,27 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
     if lambdas is None:          
     # Get a mean accuracy value for each degree only
         for degree in degrees:
-                degree_accs_tr = []
-                degree_accs_te = []
-                degree_losses_tr = []
-                degree_losses_te = []
-                for k in range(k_fold):
-                    loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params)
-                    degree_accs_tr.append(acc_tr)
-                    degree_accs_te.append(acc_te)
-                    degree_losses_tr.append(loss_tr)
-                    degree_losses_te.append(loss_te)
-                accs_tr.append(np.mean(lambda_accs_tr))
-                accs_te.append(np.mean(lambda_accs_te))
-                losses_tr.append(np.mean(lambda_losses_tr))
-                losses_te.append(np.mean(lambda_losses_te))
+            degree_accs_tr = []
+            degree_accs_te = []
+            degree_losses_tr = []
+            degree_losses_te = []
+            if feedback:
+                print('Optimizing degree {}/{}, model: {}, arguments: {}'.format(degree, np.array(degrees)[-1], model, params))
+            for k in range(k_fold):
+                loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params)
+                degree_accs_tr.append(acc_tr)
+                degree_accs_te.append(acc_te)
+                degree_losses_tr.append(loss_tr)
+                degree_losses_te.append(loss_te)
+            accs_tr.append(np.mean(lambda_accs_tr))
+            accs_te.append(np.mean(lambda_accs_te))
+            losses_tr.append(np.mean(lambda_losses_tr))
+            losses_te.append(np.mean(lambda_losses_te))
     else:
     # Get a mean accuracy value (by cross-validation) for each degree-lambda combination
         for degree in degrees:
-            degrees_accs_tr = []
-            degrees_accs_te = []
+            degree_accs_tr = []
+            degree_accs_te = []
             degree_losses_tr = []
             degree_losses_te = []
             for lambda_ in lambdas:
@@ -375,6 +381,9 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
                     dict_ = {'lambda' : lambda_}
                     params = dict_
                 else: params['lambda'] = lambda_
+                # give feedback
+                if feedback:
+                    print('Optimizing degree {}/{}, model: {}, arguments: {}'.format(degree, np.array(degrees)[-1], model, params))
                 #start cross-validating on degree-lambda pair
                 for k in range(k_fold):
                     loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params)
@@ -382,20 +391,22 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
                     lambda_accs_te.append(acc_te)
                     lambda_losses_tr.append(loss_tr)
                     lambda_losses_te.append(loss_te)
-                degrees_accs_tr.append(np.mean(lambda_accs_tr))
-                degrees_accs_te.append(np.mean(lambda_accs_te))
-                degrees_losses_tr.append(np.mean(lambda_losses_tr))
-                degrees_losses_te.append(np.mean(lambda_losses_te))
-            accs_tr.append(degrees_accs_tr)
-            accs_te.append(degrees_accs_te)
-            losses_tr.append(degrees_losses_tr)
-            losses_te.append(degrees_losses_te)
+                degree_accs_tr.append(np.mean(lambda_accs_tr))
+                degree_accs_te.append(np.mean(lambda_accs_te))
+                degree_losses_tr.append(np.mean(lambda_losses_tr))
+                degree_losses_te.append(np.mean(lambda_losses_te))
+            accs_tr.append(degree_accs_tr)
+            accs_te.append(degree_accs_te)
+            losses_tr.append(degree_losses_tr)
+            losses_te.append(degree_losses_te)
               
     return np.array(losses_tr), np.array(losses_te), np.array(accs_tr), np.array(accs_te)
               
-"""Functions used to plot losses and parameters for model selection"""                                                                     
+""""""""""""""""""""""""
+"  PLOTTING FUNCTIONS  "
+""""""""""""""""""""""""
 
-def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'MSE', model_name = 'model'):
+def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'MSE', model_name = 'model', saveimg = False, img_name = '-1'):
     """
     Visualization of the curves of mse/accuracy given parameter (degree, lambda or other).
      :param params: list of the parameters used for each version of the model
@@ -404,6 +415,8 @@ def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'MSE
      :param param: label of the parameter used
      :param err_type: type of error (mse or accuracy)
      :param model_name: name of the model used
+     :param saveimg: boolean indicating if the image generated must be saved
+     :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
     """
     if err_type == 'MSE' or err_type == 'mse':
         best_idx = np.argmin(err_te)
@@ -422,9 +435,14 @@ def plot_param_vs_loss(params, err_tr, err_te, param = 'degree', err_type = 'MSE
     plt.title(err_type + ' of ' + model_name + ' given different values for parameter: ' + param)
     plt.legend()
     plt.grid(True)
+    if saveimg:
+        if img_name == '-1':
+            print('Argument not found: img_name. Image not saved.')
+        else:
+            fig.savefig('figures/' + img_name)
     plt.show()
 
-def plot_param_vs_loss_and_acc(params, loss_tr, loss_te, acc_tr, acc_te, param = 'degree', model_name = 'model'):
+def plot_param_vs_loss_and_acc(params, loss_tr, loss_te, acc_tr, acc_te, param = 'degree', model_name = 'model', save_img = False, img_name = '-1'):
     """
     Visualization of the curves of loss AND accuracy given parameter (degree, learning rate, lambda).
      :param params: list of the parameters used for each version of the model
@@ -434,6 +452,8 @@ def plot_param_vs_loss_and_acc(params, loss_tr, loss_te, acc_tr, acc_te, param =
      :param acc_te: corresponding test accuracy
      :param param: label of the parameter used
      :param model_name: name of the model used
+     :param saveimg: boolean indicating if the image generated must be saved
+     :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
     """
     
     best_idx_loss = np.argmin(loss_te)
@@ -461,28 +481,42 @@ def plot_param_vs_loss_and_acc(params, loss_tr, loss_te, acc_tr, acc_te, param =
     axs[0].grid(True)
     axs[1].grid(True)
     fig.legend()
+    if saveimg:
+        if img_name == '-1':
+            print('Argument not found: img_name. Image not saved.')
+        else:
+            fig.savefig('figures/' + img_name)
     plt.show()
     
-def plot_boxplots(losses, model_names, err_type = 'MSE'):
+def plot_boxplots(errors, model_names, err_type = 'MSE', saveimg = False, img_name = '-1'):
     """
     Visualisation of the performance of models across folds.
-     :param losses: array of losses, such that each ROW contains the losses of a same model on different folds (cross-validation)
+     :param errors: array of losses/accruacies, such that each ROW contains the losses/accuracies of a same model on different folds (cross-validation)
      :param model_names: names of the models corresponding to each row
      :param err_type: type of error (loss or accuracy)
+     :param saveimg: boolean indicating if the image generated must be saved
+     :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
     """
-    losses = losses.T
-    bp = plt.boxplot(losses, labels = model_names, showmeans = True)
+    errors = errors.T
+    bp = plt.boxplot(errors, labels = model_names, showmeans = True)
     plt.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
-    plt.title('Boxplot of the ' + err_type + ' models (' + str(np.array(losses).shape[1]) + ' folds)')
+    plt.title('Boxplot of the ' + err_type + ' models (' + str(np.array(errors).shape[1]) + ' folds)')
     plt.ylabel(err_type)
+    if saveimg:
+        if img_name == '-1':
+            print('Argument not found: img_name. Image not saved.')
+        else:
+            fig.savefig('figures/' + img_name)
     plt.show()
     
-def plot_twice_boxplots(losses, accuracies, model_names):
+def plot_twice_boxplots(losses, accuracies, model_names, saveimg = False, img_name = '-1'):
     """
     Visualisation of the performance of models across folds.
      :param losses: array of losses. Each ROW contains the loss of a same model on different folds (cross-validation)
      :param accuracies: array of accuraciess. Each ROW contains the accuracy of a same model on different folds (cross-validation)
      :param model_names: names of the models corresponding to each row
+     :param saveimg: boolean indicating if the image generated must be saved
+     :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
     """
     losses = losses.T
     accuracies = accuracies.T
@@ -493,23 +527,30 @@ def plot_twice_boxplots(losses, accuracies, model_names):
     bp = axs[1].boxplot(accuracies, labels = model_names, showmeans = True)
     axs[1].set_ylabel('Accuracy')
     fig.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
+    if saveimg:
+        if img_name == '-1':
+            print('Argument not found: img_name. Image not saved.')
+        else:
+            fig.savefig('figures/' + img_name)
     plt.show()
     
-def plot_heatmap(losses_tr, losses_te, degrees, lambdas, model_name, measure_type = 'Accuracy'):
+def plot_heatmap(err_tr, err_te, degrees, lambdas, model_name, measure_type = 'Accuracy', saveimg = False, img_name = '-1'):
     """
     Visualisation of accuracy/loss computed over all lambda-degrees combinations using a heatmap
-    :param losses_tr: matrix of losses/accuracies computed on training set
-    :param losses_te: matrix of losses/accuracies computed on test set
+    :param err_tr: matrix of losses/accuracies computed on training set
+    :param err_te: matrix of losses/accuracies computed on test set
     :param degrees: vector of all degrees used to create feature on data before training
     :param lambdas: vector of all lambdas used to regularize training
     :param model_name: model type used to train on data and predict labels
     :param measure_type: Measure used to assess performance (MSE/NLL/Accuracy)
+    :param saveimg: boolean indicating if the image generated must be saved
+    :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
     """
-    fig, axs = plt.subplots(1, 2, figsize = [12,5])
+    fig, axs = plt.subplots(1, 2, figsize = [15,8])
     fig.suptitle(measure_type + ' of ' + model_name + ' given different values for parameter lambda and degree.')
     
     for i in range(2):
-        axs[i].imshow(losses_tr, cmap = 'PiYG')
+        axs[i].imshow(err_tr, cmap = 'PiYG')
         axs[i].set_xticks(np.arange(len(lambdas)))
         axs[i].set_yticks(np.arange(len(degrees)))
         axs[i].set_xticklabels(lambdas)
@@ -522,12 +563,16 @@ def plot_heatmap(losses_tr, losses_te, degrees, lambdas, model_name, measure_typ
     # Write accuracy values
     for i in range(len(degrees)):
         for j in range(len(lambdas)):
-            text = axs[0].text(j, i, losses_tr[i, j],
+            text = axs[0].text(j, i, round(err_tr[i, j], 3),
                            ha="center", va="center", color="k")
-            text = axs[1].text(j, i, losses_te[i, j],
+            text = axs[1].text(j, i, round(err_te[i, j], 3),
                            ha="center", va="center", color="k")
 
     axs[0].set_title("Train " + measure_type)
     axs[1].set_title("Test " + measure_type)
-    fig.tight_layout()
+    if saveimg:
+        if img_name == '-1':
+            print('Argument not found: img_name. Image not saved.')
+        else:
+            fig.savefig('figures/' + img_name)
     plt.show()
