@@ -137,57 +137,64 @@ def build_poly(X, degree):
         X_poly = np.hstack((X_poly, new_part))
     return X_poly
 
-def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
+def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None):
     '''
     Preprocessing of the data.
-    :param y: labels [n_samples]
-    :param tX: data [n_samples x n_dim]
-    :param ids: ids of samples [n_samples]
+    :param y_train: labels [n_samples]
+    :param tX_train: data [n_samples x n_dim]
+    :param ids_train: ids of samples [n_samples]
     :param mean: if provided, mean used to standardize the data [optional: float]
     :param std: if provided, std used to standardize the data [optional: float]
     :param param: dict of different parameters to preprocess the data [dict]
-                  default: {'Print_info': False, 'Remove_missing': False, 'Standardization': True,
-                            'Missing_to_0': True, 'Missing_to_median': False, 'Build_poly': True,
-                            'Degree_poly': 9}
+                  default: {'Print_info': False, 'Remove_missing': False, 'Remove_random_parameters': False,
+                            'Standardization': True, 'Missing_to_0': True, 'Missing_to_median': False,
+                            'Build_poly': True, 'Degree_poly': 9, 'Standardization_build_poly': False}
     :return: data preprocessed (y, tX, ids, tX_mean, tX_std)
     '''
     if param is None: param = {}
     if param.get('Print_info', None) is None: param.update({'Print_info': False})  # print informations about the data tX
     if param.get('Remove_missing', None) is None: param.update({'Remove_missing': False})  # remove the samples with -999 values
+    if param.get('Remove_random_parameters', None) is None: param.update({'Remove_random_parameters': True})  # remove the useless parameters
     if param.get('Standardization', None) is None: param.update({'Standardization': True})  # standardize the data
     if param.get('Missing_to_0', None) is None: param.update({'Missing_to_0': True})  # change -999 values to 0.0
     if param.get('Missing_to_median', None) is None: param.update({'Missing_to_median': False})  # change -999 values to the median of their features
     if param.get('Build_poly', None) is None: param.update({'Build_poly': True})  # build polynomial data
     if param.get('Degree_poly', None) is None: param.update({'Degree_poly': 9})  # max degree computed when building polynomial data
-    if tX.ndim == 1:
-        tX = tX.reshape((-1,1))
+    if param.get('Standardization_build_poly', None) is None: param.update({'Standardization_build_poly': False})
+    if tX_train.ndim == 1:
+        tX_train = tX_train.reshape((-1, 1))
+    if tX_test.ndim == 1:
+        tX_test = tX_train.reshape((-1, 1))
 
+    tX = np.vstack((tX_train, tX_test))
     mat_missing = np.full(tX.shape, False)  # matrix [n_samples x n_dim] containing True when tX==-999 and False when tX!=-999
     mat_missing[np.where(tX == -999)] = True
-    id_good = np.where(tX.min(axis=1) == -999.0, False, True)  # ids of samples without -999 values
+    id_good_train = np.where(tX_train.min(axis=1) == -999.0, False, True)  # ids of samples in X_train without -999 values
 
     if param['Print_info']:
-        print(f"Minimum value of X: {tX.min()}\nMaximum value of X: {tX.max()}")
-        values, counts = np.unique(tX, return_counts=True)
-        print(f"Number of -999.0 in X: {dict(zip(values, counts)).get(-999.0,0)}")
-        N_good = np.count_nonzero(id_good)
-        print(f"Number of samples without -999.0: {N_good}/{id_good.size}")
+        print(f"Minimum value of X_train: {tX_train.min()}\nMaximum value of X_train: {tX_train.max()}")
+        values, counts = np.unique(tX_train, return_counts=True)
+        print(f"Number of -999.0 in X_train: {dict(zip(values, counts)).get(-999.0,0)}")
+        N_good = np.count_nonzero(id_good_train)
+        print(f"Number of samples without -999.0 in X_train: {N_good}/{id_good_train.size}")
     if param['Remove_missing']:
-        tX = tX[id_good]
-        y = y[id_good]
-        ids = ids[id_good]
+        tX = np.vstack((tX[:tX_train.shape[0],:][id_good_train],tX[-tX_test.shape[0]:,:]))
+        y_train = y_train[id_good_train]
+        ids_train = ids_train[id_good_train]
+        mat_missing = np.full(tX.shape, False)
+        mat_missing[np.where(tX == -999)] = True
+    if param['Remove_random_parameters']:
+        tX = np.delete(tX, [15,18,20,25,28], axis=1)
     if param['Standardization']:
-        tX_mean = mean
-        tX_std = std
         if int(np.__version__.split('.')[0])>=1 and int(np.__version__.split('.')[1])>=20:
-            if mean is None: tX_mean = tX.mean(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
-            if std is None: tX_std = tX.std(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
+            tX_mean = tX.mean(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
+            tX_std = tX.std(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
         else:
             tX2 = tX.copy()
             tX2[mat_missing] = np.nan
-            if mean is None: tX_mean = np.nanmean(tX2, axis=0).reshape(1,-1)
-            if std is None: tX_std = np.nanstd(tX2, axis=0).reshape(1,-1)
-        tX = (tX-tX_mean)/tX_std
+            tX_mean = np.nanmean(tX2, axis=0).reshape(1,-1)
+            tX_std = np.nanstd(tX2, axis=0).reshape(1,-1)
+        tX = (tX - tX_mean) / tX_std
     if param['Missing_to_0']:
         tX[mat_missing] = 0.0
     if param['Missing_to_median']:
@@ -198,7 +205,23 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
         tX[ind_missing] = tX_median[ind_missing[1]]
     if param['Build_poly']:
         tX = build_poly(tX, param['Degree_poly'])
-    return y, tX, ids, tX_mean, tX_std
+        if param['Standardization_build_poly']:
+            mat_missing = np.tile(mat_missing, (1, param['Degree_poly']))
+            if int(np.__version__.split('.')[0]) >= 1 and int(np.__version__.split('.')[1]) >= 20:
+                tX_mean = tX[:,1:].mean(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
+                tX_std = tX[:,1:].std(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
+            else:
+                tX2 = tX[:,1:].copy()
+                tX2[mat_missing] = np.nan
+                tX_mean = np.nanmean(tX2, axis=0).reshape(1, -1)
+                tX_std = np.nanstd(tX2, axis=0).reshape(1, -1)
+            tX[:,1:] = (tX[:,1:] - tX_mean) / tX_std
+    tX_train = tX[:-tX_test.shape[0], :]
+    tX_test = tX[-tX_test.shape[0]:,:]
+    print(tX_train[:3,-10:])
+    return y_train, tX_train, ids_train, tX_test, ids_test
+
+
 
 def build_k_indices(y, k_fold, seed):
     '''
