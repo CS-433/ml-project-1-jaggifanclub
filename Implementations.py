@@ -146,7 +146,7 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
     :param mean: if provided, mean used to standardize the data [optional: float]
     :param std: if provided, std used to standardize the data [optional: float]
     :param param: dict of different parameters to preprocess the data [dict]
-                  default: {'Print_info': False, 'Remove_missing': False, 'Remove_random_parameters': False,
+                  default: {'Print_info': False, 'Remove_missing': False, 'Remove_random_parameters': True,
                             'Standardization': True, 'Missing_to_0': True, 'Missing_to_median': False,
                             'Build_poly': True, 'Degree_poly': 9, 'Standardization_build_poly': False}
     :return: data preprocessed (y, tX, ids, tX_mean, tX_std)
