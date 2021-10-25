@@ -185,6 +185,8 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
         mat_missing[np.where(tX == -999)] = True
     if param['Remove_random_parameters']:
         tX = np.delete(tX, [15,18,20,25,28], axis=1)
+        mat_missing = np.full(tX.shape, False)
+        mat_missing[np.where(tX == -999)] = True
     if param['Standardization']:
         if int(np.__version__.split('.')[0])>=1 and int(np.__version__.split('.')[1])>=20:
             tX_mean = tX.mean(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
