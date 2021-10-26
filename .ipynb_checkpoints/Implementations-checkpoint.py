@@ -1,7 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from proj1_helpers import*
-import os.path
 
 """"""""""""""""""""""""
 "  REQUIRED FUNCTIONS  "
@@ -63,131 +60,66 @@ def reg_logistic_regression():
 " ADDITIONAL FUNCTIONS "
 """"""""""""""""""""""""
 
-def compute_loss_MSE(y, tX, w):
-    """Computes MSE"""
-    e = y.reshape(-1,1) - tX@(w.reshape(-1, 1))
-    loss_MSE = (e.T@e).item()/(2*y.size)
-    return loss_MSE
-
-def compute_loss_NLL(y, tx, w):
-    """compute the loss: negative log likelihood."""
-    sig = sigmoid(tx.dot(w))
-    loss = - np.sum( y*np.log(sig)  +  (1 - y) * np.log(1-sig) )
-    return loss
-
-def compute_accuracy(y, tx, w):
-    """Computes accuracy"""
-    return np.mean(y == predict_labels(w, tx))
-
-def compute_gradient(y, tx, w):
-    """Computes gradient for (stochastic) gradient descent"""
-    e = y - np.dot(tx, w)                        #dim = n
-    gradient = -1/len(y)  *  np.dot(tx.T, e)     #dim = d
-    return gradient
-
-def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
-    """Create mini-batches during GD/SGD."""
-    data_size = len(y)
-
-    if shuffle:
-        shuffle_indices = np.random.permutation(np.arange(data_size))
-        shuffled_y = y[shuffle_indices]
-        shuffled_tx = tx[shuffle_indices]
-    else:
-        shuffled_y = y
-        shuffled_tx = tx
-    for batch_num in range(num_batches):
-        start_index = batch_num * batch_size
-        end_index = min((batch_num + 1) * batch_size, data_size)
-        if start_index != end_index:
-            yield shuffled_y[start_index:end_index], shuffled_tx[start_index:end_index]
-
-def split_data(x, y, ratio, seed=1):
-    """Splits the data into 2 sets."""
-    # set seed
-    np.random.seed(seed)
-    
-    #get split shuffled indexes 
-    nb_row = len(y)
-    idx = np.random.permutation(nb_row)
-    limit = int(ratio*nb_row)
-    train_idx = idx[:limit]
-    test_idx = idx[limit:]
-    
-    # split data
-    x_train = x[train_idx]
-    x_test = x[test_idx]
-    y_train = y[train_idx]
-    y_test = y[test_idx]
-    
-    return x_train, y_train, x_test, y_test
-
-def build_poly(X, degree):
-    '''
-    Polynomial basis functions for input data x.
-    If the bias column [column of ones] is not already added in x, automatic addition of the bias column.
-    :param x: data [n_samples x n_dim] or [n_samples x (n_dim+1)] if the bias is already added
-    :param degree: maximum degree computed [int]
-    :return: polynomial data [n_samples x (n_dim*degree+1)]
-    '''
-    if np.all(X[:,0]==np.ones(X.shape[0])) == False: X = np.c_[np.ones(X.shape[0]), X]
-    X_poly = X[:,0].reshape(-1,1)
-    for param in range(1,X.shape[1]):
-        new_part = np.power(X[:,param].reshape(-1, 1), np.arange(1, degree + 1).reshape(1, -1))
-        X_poly = np.hstack((X_poly, new_part))
-    return X_poly
-
-def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
+def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None):
     '''
     Preprocessing of the data.
-    :param y: labels [n_samples]
-    :param tX: data [n_samples x n_dim]
-    :param ids: ids of samples [n_samples]
+    :param y_train: labels [n_samples]
+    :param tX_train: data [n_samples x n_dim]
+    :param ids_train: ids of samples [n_samples]
     :param mean: if provided, mean used to standardize the data [optional: float]
     :param std: if provided, std used to standardize the data [optional: float]
     :param param: dict of different parameters to preprocess the data [dict]
-                  default: {'Print_info': False, 'Remove_missing': False, 'Standardization': True,
-                            'Missing_to_0': True, 'Missing_to_median': False, 'Build_poly': True,
-                            'Degree_poly': 9}
+                  default: {'Print_info': False, 'Remove_missing': False, 'Remove_random_parameters': True,
+                            'Standardization': True, 'Missing_to_0': True, 'Missing_to_median': False,
+                            'Build_poly': True, 'Degree_poly': 9, 'Standardization_build_poly': False}
     :return: data preprocessed (y, tX, ids, tX_mean, tX_std)
     '''
     if param is None: param = {}
     if param.get('Print_info', None) is None: param.update({'Print_info': False})  # print informations about the data tX
     if param.get('Remove_missing', None) is None: param.update({'Remove_missing': False})  # remove the samples with -999 values
+    if param.get('Remove_random_parameters', None) is None: param.update({'Remove_random_parameters': True})  # remove the useless parameters
     if param.get('Standardization', None) is None: param.update({'Standardization': True})  # standardize the data
     if param.get('Missing_to_0', None) is None: param.update({'Missing_to_0': True})  # change -999 values to 0.0
     if param.get('Missing_to_median', None) is None: param.update({'Missing_to_median': False})  # change -999 values to the median of their features
     if param.get('Build_poly', None) is None: param.update({'Build_poly': True})  # build polynomial data
     if param.get('Degree_poly', None) is None: param.update({'Degree_poly': 9})  # max degree computed when building polynomial data
-    if tX.ndim == 1:
-        tX = tX.reshape((-1,1))
+    if param.get('Standardization_build_poly', None) is None: param.update({'Standardization_build_poly': False})
+    if tX_train.ndim == 1:
+        tX_train = tX_train.reshape((-1, 1))
+    if tX_test.ndim == 1:
+        tX_test = tX_train.reshape((-1, 1))
 
+    tX = np.vstack((tX_train, tX_test))
     mat_missing = np.full(tX.shape, False)  # matrix [n_samples x n_dim] containing True when tX==-999 and False when tX!=-999
     mat_missing[np.where(tX == -999)] = True
-    id_good = np.where(tX.min(axis=1) == -999.0, False, True)  # ids of samples without -999 values
+    id_good_train = np.where(tX_train.min(axis=1) == -999.0, False, True)  # ids of samples in X_train without -999 values
 
     if param['Print_info']:
-        print(f"Minimum value of X: {tX.min()}\nMaximum value of X: {tX.max()}")
-        values, counts = np.unique(tX, return_counts=True)
-        print(f"Number of -999.0 in X: {dict(zip(values, counts)).get(-999.0,0)}")
-        N_good = np.count_nonzero(id_good)
-        print(f"Number of samples without -999.0: {N_good}/{id_good.size}")
+        print(f"Minimum value of X_train: {tX_train.min()}\nMaximum value of X_train: {tX_train.max()}")
+        values, counts = np.unique(tX_train, return_counts=True)
+        print(f"Number of -999.0 in X_train: {dict(zip(values, counts)).get(-999.0,0)}")
+        N_good = np.count_nonzero(id_good_train)
+        print(f"Number of samples without -999.0 in X_train: {N_good}/{id_good_train.size}")
     if param['Remove_missing']:
-        tX = tX[id_good]
-        y = y[id_good]
-        ids = ids[id_good]
+        tX = np.vstack((tX[:tX_train.shape[0],:][id_good_train],tX[-tX_test.shape[0]:,:]))
+        y_train = y_train[id_good_train]
+        ids_train = ids_train[id_good_train]
+        mat_missing = np.full(tX.shape, False)
+        mat_missing[np.where(tX == -999)] = True
+    if param['Remove_random_parameters']:
+        tX = np.delete(tX, [15,18,20,25,28], axis=1)
+        mat_missing = np.full(tX.shape, False)
+        mat_missing[np.where(tX == -999)] = True
     if param['Standardization']:
-        tX_mean = mean
-        tX_std = std
         if int(np.__version__.split('.')[0])>=1 and int(np.__version__.split('.')[1])>=20:
-            if mean is None: tX_mean = tX.mean(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
-            if std is None: tX_std = tX.std(axis=0, where=np.invert(mat_missing)).reshape(1,-1)
+            tX_mean = tX.mean(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
+            tX_std = tX.std(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
         else:
             tX2 = tX.copy()
             tX2[mat_missing] = np.nan
-            if mean is None: tX_mean = np.nanmean(tX2, axis=0).reshape(1,-1)
-            if std is None: tX_std = np.nanstd(tX2, axis=0).reshape(1,-1)
-        tX = (tX-tX_mean)/tX_std
+            tX_mean = np.nanmean(tX2, axis=0).reshape(1,-1)
+            tX_std = np.nanstd(tX2, axis=0).reshape(1,-1)
+        tX = (tX - tX_mean) / tX_std
     if param['Missing_to_0']:
         tX[mat_missing] = 0.0
     if param['Missing_to_median']:
@@ -198,7 +130,23 @@ def preprocess_data(y, tX, ids, mean=None, std=None, param=None):
         tX[ind_missing] = tX_median[ind_missing[1]]
     if param['Build_poly']:
         tX = build_poly(tX, param['Degree_poly'])
-    return y, tX, ids, tX_mean, tX_std
+        if param['Standardization_build_poly']:
+            mat_missing = np.tile(mat_missing, (1, param['Degree_poly']))
+            if int(np.__version__.split('.')[0]) >= 1 and int(np.__version__.split('.')[1]) >= 20:
+                tX_mean = tX[:,1:].mean(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
+                tX_std = tX[:,1:].std(axis=0, where=np.invert(mat_missing)).reshape(1, -1)
+            else:
+                tX2 = tX[:,1:].copy()
+                tX2[mat_missing] = np.nan
+                tX_mean = np.nanmean(tX2, axis=0).reshape(1, -1)
+                tX_std = np.nanstd(tX2, axis=0).reshape(1, -1)
+            tX[:,1:] = (tX[:,1:] - tX_mean) / tX_std
+    tX_train = tX[:-tX_test.shape[0], :]
+    tX_test = tX[-tX_test.shape[0]:,:]
+    #print(tX_train[:3,-10:])
+    return y_train, tX_train, ids_train, tX_test, ids_test
+
+
 
 def build_k_indices(y, k_fold, seed):
     '''
@@ -401,179 +349,3 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
             losses_te.append(degree_losses_te)
               
     return np.array(losses_tr), np.array(losses_te), np.array(accs_tr), np.array(accs_te)
- 
-    
-""""""""""""""""""""""""
-"  PLOTTING FUNCTIONS  "
-""""""""""""""""""""""""
-
-def plot_param_vs_err(params, err_tr, err_te, model_name = 'model', err_type = 'MSE', param = 'degree', save_img = False, img_name = '-1'):
-    """
-    Visualization of the curves of mse/accuracy given parameter (degree, lambda or other).
-     :param params: list of the parameters used for each version of the model
-     :param err_tr: corresponding training error, whether mse or accuracy
-     :param err_te: corresponding test error, whether mse or accuracy
-     :param param: label of the parameter used
-     :param err_type: type of error (mse or accuracy)
-     :param model_name: name of the model used
-     :param save_img: boolean indicating if the image generated must be saved
-     :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
-    """
-    if err_type == 'MSE' or err_type == 'mse':
-        best_idx = np.argmin(err_te)
-    elif err_type == 'accuracy' or err_type == 'Accuracy' or err_type == 'ACCURACY':
-        best_idx = np.argmax(err_te)
-    
-    if param == 'lambda':
-        plt.semilogx(params, err_tr, marker=".", color='b', label='train error')
-        plt.semilogx(params, err_te, marker=".", color='r', label='test error')
-    else:
-        plt.plot(params, err_tr, marker=".", color='b', label='train error')
-        plt.plot(params, err_te, marker=".", color='r', label='test error')
-    plt.axvline(params[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
-    plt.xlabel(param)
-    plt.ylabel(err_type)
-    plt.title(err_type + ' of ' + model_name + ' given different values for parameter: ' + param)
-    plt.legend()
-    plt.grid(True)
-    if save_img:
-        if img_name == '-1':
-            print('Argument not found: img_name. Image not saved.')
-        else:
-            plt.savefig('figures/' + img_name)
-    plt.show()
-
-def plot_param_vs_loss_and_acc(params, loss_tr, loss_te, acc_tr, acc_te, model_name = 'model', param = 'degree', save_img = False, img_name = '-1'):
-    """
-    Visualization of the curves of loss AND accuracy given parameter (degree, learning rate, lambda).
-     :param params: list of the parameters used for each version of the model
-     :param loss_tr: corresponding training loss
-     :param loss_te: corresponding test loss
-     :param acc_tr: corresponding training accuracy
-     :param acc_te: corresponding test accuracy
-     :param param: label of the parameter used
-     :param model_name: name of the model used
-     :param save_img: boolean indicating if the image generated must be saved
-     :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
-    """
-    
-    best_idx_loss = np.argmin(loss_te)
-    best_idx_acc = np.argmax(acc_te)
-    
-    fig, axs = plt.subplots(1, 2, figsize = [12,5])
-    fig.suptitle('Loss and accuracy of ' + model_name + ' given different values for parameter: ' + param)
-    if param == 'lambda':
-        axs[0].semilogx(params, loss_tr, marker=".", color='b', label='train error')
-        axs[0].semilogx(params, loss_te, marker=".", color='r', label='test error')
-        axs[1].semilogx(params, acc_tr, marker=".", color='b')
-        axs[1].semilogx(params, acc_te, marker=".", color='r')    
-    else:
-        axs[0].plot(params, loss_tr, marker=".", color='b', label='train error')
-        axs[0].plot(params, loss_te, marker=".", color='r', label='test error')
-        axs[1].plot(params, acc_tr, marker=".", color='b')
-        axs[1].plot(params, acc_te, marker=".", color='r')
-    axs[0].axvline(params[best_idx_loss], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
-    axs[1].axvline(params[best_idx_acc], color = 'k', ls = '--', alpha = 0.5)
-    
-    axs[0].set_xlabel(param)
-    axs[1].set_xlabel(param)
-    axs[0].set_ylabel('Loss')
-    axs[1].set_ylabel('Accuracy')
-    axs[0].grid(True)
-    axs[1].grid(True)
-    fig.legend()
-    if save_img:
-        if img_name == '-1':
-            print('Argument not found: img_name. Image not saved.')
-        else:
-            fig.savefig('figures/' + img_name)
-    plt.show()
-    
-def plot_boxplots(errors, model_names, err_type = 'MSE', save_img = False, img_name = '-1'):
-    """
-    Visualisation of the performance of models across folds.
-     :param errors: array of losses/accruacies, such that each ROW contains the losses/accuracies of a same model on different folds (cross-validation)
-     :param model_names: names of the models corresponding to each row
-     :param err_type: type of error (loss or accuracy)
-     :param save_img: boolean indicating if the image generated must be saved
-     :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
-    """
-    errors = errors.T
-    bp = plt.boxplot(errors, labels = model_names, showmeans = True)
-    plt.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
-    plt.title('Boxplot of the ' + err_type + ' models (' + str(np.array(errors).shape[1]) + ' folds)')
-    plt.ylabel(err_type)
-    if save_img:
-        if img_name == '-1':
-            print('Argument not found: img_name. Image not saved.')
-        else:
-            plt.savefig('figures/' + img_name)
-    plt.show()
-    
-def plot_twice_boxplots(losses, accuracies, model_names, save_img = False, img_name = '-1'):
-    """
-    Visualisation of the performance of models across folds.
-     :param losses: array of losses. Each ROW contains the loss of a same model on different folds (cross-validation)
-     :param accuracies: array of accuraciess. Each ROW contains the accuracy of a same model on different folds (cross-validation)
-     :param model_names: names of the models corresponding to each row
-     :param save_img: boolean indicating if the image generated must be saved
-     :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
-    """
-    losses = losses.T
-    accuracies = accuracies.T
-    fig, axs = plt.subplots(1, 2, figsize = [12,5])
-    fig.suptitle('Boxplot of the loss and accuracy of models (' + str(np.array(losses).shape[1]) + ' folds)')
-    axs[0].boxplot(losses, labels = model_names, showmeans = True)
-    axs[0].set_ylabel('Loss')
-    bp = axs[1].boxplot(accuracies, labels = model_names, showmeans = True)
-    axs[1].set_ylabel('Accuracy')
-    fig.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
-    if save_img:
-        if img_name == '-1':
-            print('Argument not found: img_name. Image not saved.')
-        else:
-            fig.savefig('figures/' + img_name)
-    plt.show()
-    
-def plot_heatmap(err_tr, err_te, degrees, lambdas, model_name, measure_type = 'Accuracy', save_img = False, img_name = '-1'):
-    """
-    Visualisation of accuracy/loss computed over all lambda-degrees combinations using a heatmap
-    :param err_tr: matrix of losses/accuracies computed on training set
-    :param err_te: matrix of losses/accuracies computed on test set
-    :param degrees: vector of all degrees used to create feature on data before training
-    :param lambdas: vector of all lambdas used to regularize training
-    :param model_name: model type used to train on data and predict labels
-    :param measure_type: Measure used to assess performance (MSE/NLL/Accuracy)
-    :param save_img: boolean indicating if the image generated must be saved
-    :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
-    """
-    fig, axs = plt.subplots(1, 2, figsize = [15,8])
-    fig.suptitle(measure_type + ' of ' + model_name + ' given different values for parameter lambda and degree.')
-    
-    for i in range(2):
-        axs[i].imshow(err_tr, cmap = 'PiYG')
-        axs[i].set_xticks(np.arange(len(lambdas)))
-        axs[i].set_yticks(np.arange(len(degrees)))
-        axs[i].set_xticklabels(lambdas)
-        axs[i].set_yticklabels(degrees)
-        axs[i].set_xlabel('\u03BB')
-        axs[i].set_ylabel('degree')
-        plt.setp(axs[i].get_xticklabels(), rotation=45, ha="right",
-             rotation_mode="anchor")
-        
-    # Write accuracy values
-    for i in range(len(degrees)):
-        for j in range(len(lambdas)):
-            text = axs[0].text(j, i, round(err_tr[i, j], 3),
-                           ha="center", va="center", color="k")
-            text = axs[1].text(j, i, round(err_te[i, j], 3),
-                           ha="center", va="center", color="k")
-
-    axs[0].set_title("Train " + measure_type)
-    axs[1].set_title("Test " + measure_type)
-    if save_img:
-        if img_name == '-1':
-            print('Argument not found: img_name. Image not saved.')
-        else:
-            fig.savefig('figures/' + img_name)
-    plt.show()
