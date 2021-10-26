@@ -6,7 +6,7 @@ The aim of this project was to use different machine learning methods to predict
 
 ## REPOSITORY CONTENT
 
-The main file is *project1.ipynb*. It contains the code for the optimization of all six machine learning methods used in the project:
+The main file is ***project1.ipynb***. It contains the code for the optimization of all six machine learning methods used in the project:
 - Least-squares
 - Ridge-regression
 - Least-squares GD
