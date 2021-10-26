@@ -14,7 +14,7 @@ The main file is ***project1.ipynb***. It contains the code for the optimization
 - Logistic regression
 - Regularized logistic regression
 
-An additional notebook called *data_visualization.ipynb* shows some early visualization of the parameters and corresponding labels.
+An additional notebook called ***data_visualization.ipynb*** shows some early visualization of the parameters and corresponding labels.
 
 All functions used are divided between 4 python files:
 - ***Implementations.py*** for the principal methods which can be directly seen in the main file (pre-processing, cross-validation, ML methods).
