@@ -13,6 +13,12 @@ def compute_loss_NLL(y, tx, w):
     loss = - np.sum( y*np.log(sig)  +  (1 - y) * np.log(1-sig) )
     return loss
 
+def ada_grad(gradient, h, gamma_zero):
+    """Step-size control for linear and logistic regression"""
+    h+=np.power(gradient, 2)
+    gamma=gamma_zero*(1/np.sqrt(h))
+    return gamma, h
+
 def compute_accuracy(y, tx, w):
     """Computes accuracy"""
     return np.mean(y == predict_labels(w, tx))
