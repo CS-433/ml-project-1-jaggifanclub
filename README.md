@@ -1,4 +1,5 @@
 # EPFL Project 1 - The Higgs Boson
+#### Camille Delgrange, Jeremy Goumaz, Loris Constantin
 
 ## INTRODUCTION
 
@@ -6,15 +7,13 @@ The aim of this project was to use different machine learning methods to predict
 
 ## REPOSITORY CONTENT
 
-The main file is ***project1.ipynb***. It contains the code for the optimization of all six machine learning methods used in the project:
+The main file is ***project1.ipynb***. It contains the code for data visualization and the optimization of all six machine learning methods used in the project:
 - Least-squares
 - Ridge-regression
 - Least-squares GD
 - Least-squares SGD
 - Logistic regression
 - Regularized logistic regression
-
-An additional notebook called ***data_visualization.ipynb*** shows some early visualization of the parameters and corresponding labels.
 
 All functions used are divided between 4 python files:
 - ***Implementations.py*** for the principal methods which can be directly seen in the main file (pre-processing, cross-validation, ML methods).
