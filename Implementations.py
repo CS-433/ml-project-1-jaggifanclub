@@ -288,6 +288,7 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedb
     
     elif model == 'reg_logistic_regression':
         lambda_, max_iters, gamma = params['lambda'], params['max_iters'], params['gamma']
+        initial_w = np.zeros(feat_matrix_tr.shape[1])
         w, loss_tr = reg_logistic_regression(y_tr, feat_matrix_tr, lambda_, initial_w, max_iters, gamma)
     
     else:
