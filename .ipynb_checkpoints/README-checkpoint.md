@@ -6,7 +6,7 @@ The aim of this project was to use different machine learning methods to predict
 
 ## REPOSITORY CONTENT
 
-The main file is *project1.ipynb*. It contains the code for the optimization of all six machine learning methods used in the project:
+The main file is ***project1.ipynb***. It contains the code for the optimization of all six machine learning methods used in the project:
 - Least-squares
 - Ridge-regression
 - Least-squares GD
@@ -14,7 +14,7 @@ The main file is *project1.ipynb*. It contains the code for the optimization of 
 - Logistic regression
 - Regularized logistic regression
 
-An additional notebook called *data_visualization.ipynb* shows some early visualization of the parameters and corresponding labels.
+An additional notebook called ***data_visualization.ipynb*** shows some early visualization of the parameters and corresponding labels.
 
 All functions used are divided between 4 python files:
 - ***Implementations.py*** for the principal methods which can be directly seen in the main file (pre-processing, cross-validation, ML methods).
@@ -22,6 +22,7 @@ All functions used are divided between 4 python files:
 - ***Plot.py*** for the functions used for any visualization.
 - ***proj1_helpers.py*** for provided functions, used for data loading and submissions creation.
 Every function features a commentary on its use, particularly extensive for the more convoluted ones.
+Note that for the required functions using gradient descent, we use an additional argument for visualization purposes, but its default value allow their standard use.
 
 The repository contains different folders: 
 - ***best_models_perf*** contains lists of accuracies on the optimized versions of each method, used for models comparison using boxplots.
