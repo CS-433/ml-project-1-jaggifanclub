@@ -387,7 +387,6 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
             losses_tr.append(np.mean(degree_losses_tr))
             losses_te.append(np.mean(degree_losses_te))
     else:
-        print("coucou")
     # Get a mean accuracy value (by cross-validation) for each degree-lambda combination
         for degree in degrees:
             degree_accs_tr = []
