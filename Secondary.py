@@ -7,11 +7,38 @@ def compute_loss_MSE(y, tX, w):
     loss_MSE = (e.T@e).item()/(2*y.size)
     return loss_MSE
 
-def compute_loss_NLL(y, tx, w):
-    """Compute the loss: negative log likelihood.    -   A CHANGER, PAS LA BONNE LOSS POUR (-1,1)"""
-    sig = sigmoid(tx.dot(w))
-    loss = - np.sum( y*np.log(sig)  +  (1 - y) * np.log(1-sig) )
+def sigmoid(t):
+    sig = np.empty(t.shape, dtype=np.float64) # initialization
+    sig[np.logical_and(t<1000, t>-1000)] = (1.0 / (1.0 + np.exp(-t)))[np.logical_and(t<1000, t>-1000)] # 1/(1+e^(-t))
+    sig[t>=1000] = 1.0 # fix numerical errors: if t>=1000, then e^(-t) < 10^434, then we assume 1/(1+e^(-t))=1
+    sig[t<=-1000] = 0.0 # fix numerical errors: if t<=1000, then e^(-t) > 10^434, then we assume 1/(1+e^(-t))=0
+    return sig
+
+def compute_loss_NLL(y, tX, w, lambda_=0.0):
+    y = y.reshape(-1, 1)
+    tX = tX.reshape(tX.shape[0], -1)
+    w = w.reshape(-1, 1)
+    t = -tX@w # exponent
+    log_part = np.empty(t.shape, dtype=np.float64) # initialization
+    log_part[t<1000] = np.log(1 + np.exp(t))[t<1000] # log(1+e^t)
+    log_part[t>=1000] = t[t>=1000] # fix numerical errors: if t>=1000, then e^t > 10^434, then we assume log(1+e^t)=t
+    loss = 0.5*(1.0-y.T)@t - log_part.sum() + lambda_*(w**2).sum()
     return loss
+
+def compute_gradient_NLL(y, tX, w, lambda_=0.0):
+    y = y.reshape(-1, 1)
+    tX = tX.reshape(tX.shape[0], -1)
+    w = w.reshape(-1, 1)
+    grad = tX.T @ (0.5*(y-1.0) + sigmoid(-tX @ w)) + 2*lambda_*w
+    return grad
+
+def compute_hessian_NLL(y, tX, w, lambda_=0.0):
+    y = y.reshape(-1, 1)
+    tX = tX.reshape(tX.shape[0], -1)
+    w = w.reshape(-1, 1)
+    S = (sigmoid(-tX @ w) * (1.0 - sigmoid(-tX @ w))).reshape(1,-1)
+    H = -(tX.T*S)@tX + np.diag(np.full((w.shape[0],),2*lambda_))
+    return H
 
 def ada_grad(gradient, h, gamma_zero):
     """Step-size control for linear and logistic regression"""
@@ -23,7 +50,7 @@ def compute_accuracy(y, tx, w):
     """Computes accuracy"""
     return np.mean(y == predict_labels(w, tx))
 
-def compute_gradient(y, tx, w):
+def compute_gradient_MSE(y, tx, w):
     """Computes gradient for (stochastic) gradient descent"""
     e = y - np.dot(tx, w)                        #dim = n
     gradient = -1/len(y)  *  np.dot(tx.T, e)     #dim = d

@@ -14,7 +14,7 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma_zero, plot=False):
     losses=[]
     for n_iter in range(max_iters):                                    
         loss = compute_loss_MSE(y, tx, w)
-        gradient = compute_gradient(y, tx, w)
+        gradient = compute_gradient_MSE(y, tx, w)
         gamma, h=ada_grad(gradient, h, gamma_zero)
         w = w - gamma * gradient
         print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(
@@ -39,7 +39,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma_zero, batch_size = 1):
         generator = batch_iter(y, tx, batch_size)                      
         y_sub, tx_sub = next(generator)
         loss = compute_loss_MSE(y_sub, tx_sub, w)
-        stoch_gradient = compute_gradient(y_sub, tx_sub, w)
+        stoch_gradient = compute_gradient_MSE(y_sub, tx_sub, w)
         gamma, h=ada_grad(stoch_gradient, h, gamma_zero)
         w = w - gamma * stoch_gradient
         print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
@@ -63,11 +63,53 @@ def ridge_regression(y, tx, lambda_):
     loss = compute_loss_MSE(y, tx, w)
     return w, loss
 
-def logistic_regression():
-    return None
+def logistic_regression(y, tX, initial_w, max_iters, gamma, param=None):
+    ''' Logistic regression using gradient descent or SGD '''
+    return reg_logistic_regression(y, tX, 0.0, initial_w, max_iters, gamma, param)
 
-def reg_logistic_regression():
-    return None
+def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=None):
+    ''' Regularized logistic regression using gradient descent or SGD '''
+    if param is None: param = {}
+    if param.get('Decreasing_gamma', None) is None: param.update({'Decreasing_gamma': False})
+    if param.get('Decreasing_gamma_final', None) is None: param.update({'Decreasing_gamma_final': 1e-4})
+    if param.get('AdaGrad', None) is None: param.update({'AdaGrad': False})
+    if param.get('Newton_method', None) is None: param.update({'Newton_method': True})
+    if param.get('Batch_size', None) is None: param.update({'Batch_size': 1})
+    if param.get('Print_update', None) is None: param.update({'Print_update': False})
+    if param['Decreasing_gamma']:
+        nb_gamma_update = math.floor(max_iters/100)
+        gamma_mult_coeff = math.exp(math.log(param['Decreasing_gamma_final']/gamma)/nb_gamma_update)
+    losses = []
+    w = initial_w
+    h = np.zeros(w.shape)
+    initial_gamma = gamma
+    iter = 0
+    stop_iter = False
+    while iter < max_iters and stop_iter == False:
+        batch_size = param['Batch_size']
+        n_batch = math.floor(y.shape[0]/batch_size)
+        for minibatch_y, minibatch_tX in batch_iter(y, tX, batch_size, n_batch):
+            loss = compute_loss_NLL(minibatch_y, minibatch_tX, w, lambda_)
+            grad = compute_gradient_NLL(minibatch_y, minibatch_tX, w, lambda_)
+            if param['Decreasing_gamma'] and iter % 100 == 0 and iter != 0:
+                gamma = gamma_mult_coeff*gamma
+            if param['AdaGrad']:
+                gamma, h = ada_grad(grad, h, initial_gamma)
+            if param['Newton_method']:
+                H = compute_hessian_NLL(minibatch_y, minibatch_tX, w, lambda_)
+                w = w - gamma*np.linalg.pinv(H)@grad
+            else:
+                w = w - gamma*grad
+            losses.append(loss)
+            if param['Print_update'] and iter % 1000 == 0:
+                print(f"Current iteration={iter}, loss={loss}")
+            if iter >= max_iters:
+                stop_iter = True
+                break
+            iter += 1
+    loss = compute_loss_NLL(y, tX, w, lambda_)
+    if param['Print_update']: print(f"Final loss={loss}")
+    return w, loss
 
 
 """"""""""""""""""""""""
