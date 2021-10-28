@@ -1,6 +1,8 @@
 import numpy as np
 from Secondary import*
 import matplotlib.pyplot as plt
+import math
+
 """"""""""""""""""""""""
 "  REQUIRED FUNCTIONS  "
 """"""""""""""""""""""""

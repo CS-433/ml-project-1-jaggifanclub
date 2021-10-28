@@ -86,7 +86,7 @@ def plot_param_vs_loss_and_acc(params, loss_tr, loss_te, acc_tr, acc_te, model_n
 def plot_boxplots(errors, model_names, err_type = 'MSE', save_img = False, img_name = '-1'):
     """
     Visualisation of the performance of models across folds.
-     :param errors: array of losses/accruacies, such that each ROW contains the losses/accuracies of a same model on different folds (cross-validation)
+     :param errors: array of losses/accuracies, such that each ROW contains the losses/accuracies of a same model on different folds (cross-validation)
      :param model_names: names of the models corresponding to each row
      :param err_type: type of error (loss or accuracy)
      :param save_img: boolean indicating if the image generated must be saved

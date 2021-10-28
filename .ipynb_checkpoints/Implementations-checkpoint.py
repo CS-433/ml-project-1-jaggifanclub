@@ -1,36 +1,60 @@
 import numpy as np
+from Secondary import*
+import matplotlib.pyplot as plt
+import math
 
 """"""""""""""""""""""""
 "  REQUIRED FUNCTIONS  "
 """"""""""""""""""""""""
 
-def least_squares_GD(y, tx, initial_w, max_iters, gamma):
+def least_squares_GD(y, tx, initial_w, max_iters, gamma_zero, plot=False):
     """Gradient descent algorithm using MSE loss."""
     # Define initial loss and weights
+    h=np.zeros(tx.shape[1])
     w = initial_w
     loss = compute_loss_MSE(y, tx, w)
-    for n_iter in range(max_iters):                                    #''' TODO: Learning rate update ?'''
+    losses=[]
+    for n_iter in range(max_iters):                                    
         loss = compute_loss_MSE(y, tx, w)
-        gradient = compute_gradient(y, tx, w)
+        gradient = compute_gradient_MSE(y, tx, w)
+        gamma, h=ada_grad(gradient, h, gamma_zero)
         w = w - gamma * gradient
-#        print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
-#              bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
+        if n_iter%20==0:
+            print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
+        if plot:
+            losses.append(loss)
+    if plot:
+        plt.plot(losses, '-', label="AdaGrad method")
+        plt.xlabel("Number of iterations")
+        plt.ylabel("Average Test loss over the k folds for the best degree")
+        plt.legend
+        plt.show
     return w, loss
 
-def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1):
+def least_squares_SGD(y, tx, initial_w, max_iters, gamma_zero, batch_size = 1, plot=False):
     """Stochastic gradient descent algorithm using MSE loss."""
     # Define parameters to store w and loss
+    h=np.zeros(tx.shape[1])
     w = initial_w
     loss = compute_loss_MSE(y, tx, w)
+    losses=[]
     for n_iter in range(max_iters):
-        generator = batch_iter(y, tx, batch_size)                      #''' TODO: A OPTIMISER ?'''
+        generator = batch_iter(y, tx, batch_size)                      
         y_sub, tx_sub = next(generator)
         loss = compute_loss_MSE(y_sub, tx_sub, w)
-        stoch_gradient = compute_gradient(y_sub, tx_sub, w)
+        stoch_gradient = compute_gradient_MSE(y_sub, tx_sub, w)
+        gamma, h=ada_grad(stoch_gradient, h, gamma_zero)
         w = w - gamma * stoch_gradient
-#        print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
-#              bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
-    loss = compute_loss_MSE(y, tx, w)
+        if n_iter%20==0:
+            print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
+        if plot==True:
+            losses.append(loss)
+    if plot==True:
+        plt.plot(losses, '-', label="AdaGrad method")
+        plt.xlabel("Number of iterations")
+        plt.ylabel("Average Test loss over the k folds for the best degree")
+        plt.legend
+        plt.show
     return w, loss
 
 def least_squares(y, tx):
@@ -49,11 +73,53 @@ def ridge_regression(y, tx, lambda_):
     loss = compute_loss_MSE(y, tx, w)
     return w, loss
 
-def logistic_regression():
-    return None
+def logistic_regression(y, tX, initial_w, max_iters, gamma, param=None):
+    ''' Logistic regression using gradient descent or SGD '''
+    return reg_logistic_regression(y, tX, 0.0, initial_w, max_iters, gamma, param)
 
-def reg_logistic_regression():
-    return None
+def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=None):
+    ''' Regularized logistic regression using gradient descent or SGD '''
+    if param is None: param = {}
+    if param.get('Decreasing_gamma', None) is None: param.update({'Decreasing_gamma': False})
+    if param.get('Decreasing_gamma_final', None) is None: param.update({'Decreasing_gamma_final': 1e-4})
+    if param.get('AdaGrad', None) is None: param.update({'AdaGrad': False})
+    if param.get('Newton_method', None) is None: param.update({'Newton_method': True})
+    if param.get('Batch_size', None) is None: param.update({'Batch_size': 1})
+    if param.get('Print_update', None) is None: param.update({'Print_update': False})
+    if param['Decreasing_gamma']:
+        nb_gamma_update = math.floor(max_iters/100)
+        gamma_mult_coeff = math.exp(math.log(param['Decreasing_gamma_final']/gamma)/nb_gamma_update)
+    losses = []
+    w = initial_w
+    h = np.zeros(w.shape)
+    initial_gamma = gamma
+    iter = 0
+    stop_iter = False
+    while iter < max_iters and stop_iter == False:
+        batch_size = param['Batch_size']
+        n_batch = math.floor(y.shape[0]/batch_size)
+        for minibatch_y, minibatch_tX in batch_iter(y, tX, batch_size, n_batch):
+            loss = compute_loss_NLL(minibatch_y, minibatch_tX, w, lambda_)
+            grad = compute_gradient_NLL(minibatch_y, minibatch_tX, w, lambda_)
+            if param['Decreasing_gamma'] and iter % 100 == 0 and iter != 0:
+                gamma = gamma_mult_coeff*gamma
+            if param['AdaGrad']:
+                gamma, h = ada_grad(grad, h, initial_gamma)
+            if param['Newton_method']:
+                H = compute_hessian_NLL(minibatch_y, minibatch_tX, w, lambda_)
+                w = w - gamma*np.linalg.pinv(H)@grad
+            else:
+                w = w - gamma*grad
+            losses.append(loss)
+            if param['Print_update'] and iter % 1000 == 0:
+                print(f"Current iteration={iter}, loss={loss}")
+            if iter >= max_iters:
+                stop_iter = True
+                break
+            iter += 1
+    loss = compute_loss_NLL(y, tX, w, lambda_)
+    if param['Print_update']: print(f"Final loss={loss}")
+    return w, loss
 
 
 """"""""""""""""""""""""
@@ -176,7 +242,7 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedb
     :param k: fold number used as test set
     :param model: model name
     :param degree: degree up to which each parameter will get extended features
-    :param params: dictionnary containing parameters relevant among {max_iters, gamma, batch_size, lambda} for the chosen model
+    :param params: dictionnary containing parameters relevant among {max_iters, gamma_zero, batch_size, lambda} for the chosen model
     :param feedback: enables feedback of cross-validation progression
     """
     #Recap of the arguments entered as the function is heavy in parameters
@@ -199,14 +265,16 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedb
         w, loss_tr = least_squares(y_tr, feat_matrix_tr)
         
     elif model == 'least_squares_GD':
-        max_iters, gamma = params['max_iters'], params['gamma']
+        max_iters, plot= params['max_iters'], params['plot']
         initial_w=np.zeros(feat_matrix_tr.shape[1])
-        w, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma)
+        gamma_zero=0.1*np.ones(feat_matrix_tr.shape[1])
+        w, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, plot)
     
     elif model == 'least_squares_SGD':
-        max_iters, gamma, batch_size = params['max_iters'], params['gamma'], params['batch_size']
+        max_iters, batch_size, plot = params['max_iters'], params['batch_size'], params['plot']
         initial_w=np.zeros(feat_matrix_tr.shape[1])
-        w, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma, batch_size)
+        gamma_zero=0.01*np.ones(feat_matrix_tr.shape[1])
+        w, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, batch_size, plot)
     
     elif model == 'ridge_regression':
         lambda_ = params['lambda']
@@ -218,7 +286,7 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedb
         w, loss_tr = logistic_regression(y_tr, feat_matrix_tr, initial_w, max_iters, gamma)
         
     
-    elif model == 'ref_logistic_regression':
+    elif model == 'reg_logistic_regression':
         lambda_, max_iters, gamma = params['lambda'], params['max_iters'], params['gamma']
         w, loss_tr = reg_logistic_regression(y_tr, feat_matrix_tr, lambda_, initial_w, max_iters, gamma)
     
@@ -271,7 +339,7 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedb
 #     best_degree=np.argmin(best_rmse)
 #     return degrees[best_degree], best_gammas[best_degree], best_rmse[best_degree]
 
-def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = None, seed = 1, feedback = False): #gammas, max_iters, batch_size, lambda
+def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = None, seed = 1, feedback = False): #max_iters, batch_size, lambda
     '''
     Optimization of parameters degree and possibly lambda
     :param y: labels [n_samples]
@@ -280,6 +348,8 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
     :param model: model chosen, either 'least_squares_GD' or 'least_squares_SGD'
     :param degrees: a list of degrees to test for the best model
     :param lambdas: a list of ridge regularizer to test for the best model
+    :param max_iters: number of iterations for linear or logistic regression using gradient descent, stochastic gradient descent
+    :param batch_size: the size of the batch if using batch gradient descent
     :param params: dictionnary of aditional parameters necessary for the model chosen
     :param seed: fixed seed for code reproducibility, by default, 1
     :param feedback: enables feedback of cross-validation progression
@@ -292,7 +362,7 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
     accs_te = []
     losses_tr = []
     losses_te = []
-    
+    #print(lambdas)
     if lambdas is None:          
     # Get a mean accuracy value for each degree only
         for degree in degrees:
@@ -300,6 +370,12 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
             degree_accs_te = []
             degree_losses_tr = []
             degree_losses_te = []
+            # Adapt dictionary for cross_validation function
+            #if params is None:
+                #dict_ = {'max_iters' : max_iters, 'batch_size': batch_size}
+                #params = dict_
+            #else: params['max_iters'] = max_iters, params['batch_size']= batch_size
+            # give feedback
             if feedback:
                 print('Optimizing degree {}/{}, model: {}, arguments: {}'.format(degree, np.array(degrees)[-1], model, params))
             for k in range(k_fold):
