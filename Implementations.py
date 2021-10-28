@@ -17,8 +17,34 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma_zero, plot=False):
         gradient = compute_gradient_MSE(y, tx, w)
         gamma, h=ada_grad(gradient, h, gamma_zero)
         w = w - gamma * gradient
-        print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(
-              bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
+        if n_iter%20==0:
+            print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
+        if plot:
+            losses.append(loss)
+    if plot:
+        plt.plot(losses, '-', label="AdaGrad method")
+        plt.xlabel("Number of iterations")
+        plt.ylabel("Average Test loss over the k folds for the best degree")
+        plt.legend
+        plt.show
+    return w, loss
+
+def least_squares_SGD(y, tx, initial_w, max_iters, gamma_zero, batch_size = 1, plot=False):
+    """Stochastic gradient descent algorithm using MSE loss."""
+    # Define parameters to store w and loss
+    h=np.zeros(tx.shape[1])
+    w = initial_w
+    loss = compute_loss_MSE(y, tx, w)
+    losses=[]
+    for n_iter in range(max_iters):
+        generator = batch_iter(y, tx, batch_size)                      
+        y_sub, tx_sub = next(generator)
+        loss = compute_loss_MSE(y_sub, tx_sub, w)
+        stoch_gradient = compute_gradient_MSE(y_sub, tx_sub, w)
+        gamma, h=ada_grad(stoch_gradient, h, gamma_zero)
+        w = w - gamma * stoch_gradient
+        if n_iter%20==0:
+            print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
         if plot==True:
             losses.append(loss)
     if plot==True:
@@ -27,24 +53,6 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma_zero, plot=False):
         plt.ylabel("Average Test loss over the k folds for the best degree")
         plt.legend
         plt.show
-    return w, loss
-
-def least_squares_SGD(y, tx, initial_w, max_iters, gamma_zero, batch_size = 1):
-    """Stochastic gradient descent algorithm using MSE loss."""
-    # Define parameters to store w and loss
-    h=np.zeros(tx.shape[1])
-    w = initial_w
-    loss = compute_loss_MSE(y, tx, w)
-    for n_iter in range(max_iters):
-        generator = batch_iter(y, tx, batch_size)                      
-        y_sub, tx_sub = next(generator)
-        loss = compute_loss_MSE(y_sub, tx_sub, w)
-        stoch_gradient = compute_gradient_MSE(y_sub, tx_sub, w)
-        gamma, h=ada_grad(stoch_gradient, h, gamma_zero)
-        w = w - gamma * stoch_gradient
-        print("Gradient Descent({bi}/{ti}): loss={l}, w0={w0}, w1={w1}".format(
-              bi=n_iter, ti=max_iters - 1, l=loss, w0=w[0], w1=w[1]))
-    loss = compute_loss_MSE(y, tx, w)
     return w, loss
 
 def least_squares(y, tx):
@@ -261,10 +269,10 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedb
         w, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, plot)
     
     elif model == 'least_squares_SGD':
-        max_iters, batch_size = params['max_iters'], params['batch_size']
+        max_iters, batch_size, plot = params['max_iters'], params['batch_size'], params['plot']
         initial_w=np.zeros(feat_matrix_tr.shape[1])
-        gamma_zero=0.1*np.ones(feat_matrix_tr.shape[1])
-        w, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, batch_size)
+        gamma_zero=0.01*np.ones(feat_matrix_tr.shape[1])
+        w, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, batch_size, plot)
     
     elif model == 'ridge_regression':
         lambda_ = params['lambda']
@@ -379,6 +387,7 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
             losses_tr.append(np.mean(degree_losses_tr))
             losses_te.append(np.mean(degree_losses_te))
     else:
+        print("coucou")
     # Get a mean accuracy value (by cross-validation) for each degree-lambda combination
         for degree in degrees:
             degree_accs_tr = []
