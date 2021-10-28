@@ -22,6 +22,7 @@ All functions used are divided between 4 python files:
 - ***Plot.py*** for the functions used for any visualization.
 - ***proj1_helpers.py*** for provided functions, used for data loading and submissions creation.
 Every function features a commentary on its use, particularly extensive for the more convoluted ones.
+Note that for the required functions using gradient descent, we use an additional argument for visualization purposes, but its default value allow their standard use.
 
 The repository contains different folders: 
 - ***best_models_perf*** contains lists of accuracies on the optimized versions of each method, used for models comparison using boxplots.
