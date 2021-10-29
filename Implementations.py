@@ -99,6 +99,9 @@ def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=N
         batch_size = param['Batch_size']
         n_batch = math.floor(y.shape[0]/batch_size)
         for minibatch_y, minibatch_tX in batch_iter(y, tX, batch_size, n_batch):
+            if iter >= max_iters:
+                stop_iter = True
+                break
             loss = compute_loss_NLL(minibatch_y, minibatch_tX, w, lambda_)
             grad = compute_gradient_NLL(minibatch_y, minibatch_tX, w, lambda_)
             if param['Decreasing_gamma'] and iter % 100 == 0 and iter != 0:
@@ -113,9 +116,6 @@ def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=N
             losses.append(loss)
             if param['Print_update'] and iter % 1000 == 0:
                 print(f"Current iteration={iter}, loss={loss}")
-            if iter >= max_iters:
-                stop_iter = True
-                break
             iter += 1
     loss = compute_loss_NLL(y, tX, w, lambda_)
     if param['Print_update']: print(f"Final loss={loss}")
