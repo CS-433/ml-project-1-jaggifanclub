@@ -22,7 +22,7 @@ def sigmoid(t):
     sig = np.empty(t.shape, dtype=np.float64) # initialization
     sig[np.logical_and(t<1000, t>-1000)] = (1.0 / (1.0 + np.exp(-t)))[np.logical_and(t<1000, t>-1000)] # 1/(1+e^(-t))
     sig[t>=1000] = 1.0 # fix numerical errors: if t>=1000, then e^(-t) < 10^434, then we assume 1/(1+e^(-t))=1
-    sig[t<=-1000] = 0.0 # fix numerical errors: if t<=1000, then e^(-t) > 10^434, then we assume 1/(1+e^(-t))=0
+    sig[t<=-1000] = 0.0 # fix numerical errors: if t<=-1000, then e^(-t) > 10^434, then we assume 1/(1+e^(-t))=0
     return sig
 
 def compute_loss_NLL(y, tX, w, lambda_=0.0):
@@ -108,25 +108,28 @@ def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
         if start_index != end_index:
             yield shuffled_y[start_index:end_index], shuffled_tx[start_index:end_index]
 
-def split_data(x, y, ratio, seed=1):
-    """Splits the data into 2 sets."""
-    # set seed
+def split_data(y, tX, ratio, seed=1):
+    '''
+    split the dataset based on the split ratio. If ratio is 0.8
+    you will have 80% of your data set dedicated to training
+    and the rest dedicated to validation
+    '''
+
+    #set seed
     np.random.seed(seed)
-    
-    #get split shuffled indexes 
-    nb_row = len(y)
-    idx = np.random.permutation(nb_row)
-    limit = int(ratio*nb_row)
-    train_idx = idx[:limit]
-    test_idx = idx[limit:]
-    
+
+    if ratio == 1.0: return tX, y, np.array([]), np.array([])
+    N = tX.shape[0]
+    limit = int(ratio*N)
+    ind = np.random.permutation(N)
+
     # split data
-    x_train = x[train_idx]
-    x_test = x[test_idx]
-    y_train = y[train_idx]
-    y_test = y[test_idx]
-    
-    return x_train, y_train, x_test, y_test
+    tX_train = tX[ind[:limit]].reshape(limit,-1)
+    tX_validation = tX[ind[limit:]].reshape(N-limit,-1)
+    y_train = y[ind[:limit]]
+    y_validation = y[ind[limit:]]
+
+    return tX_train, y_train, tX_validation, y_validation
 
 def build_poly(X, degree):
     '''
