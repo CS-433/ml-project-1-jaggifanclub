@@ -16,12 +16,12 @@ The main file is ***project1.ipynb***. It contains the code for data visualizati
 - Regularized logistic regression
 
 All functions used are divided between 4 python files:
-- ***Implementations.py*** for the principal methods which can be directly seen in the main file (pre-processing, cross-validation, ML methods).
-- ***Secondary.py*** for all methods used by the principal methods but not directly in the main file (gradient/loss computation, feature creation).
+- ***Implementations.py*** for the principal methods which can be directly seen in the main file (pre-processing, cross-validation, ML methods...).
+- ***Secondary.py*** for all methods used by the principal methods but not directly in the main file (gradient/loss computation, feature creation...).
 - ***Plot.py*** for the functions used for any visualization.
 - ***proj1_helpers.py*** for provided functions, used for data loading and submissions creation.
 Every function features a commentary on its use, particularly extensive for the more convoluted ones.
-Note that for the required functions using gradient descent, we use an additional argument for visualization purposes, but its default value allow their standard use.
+Note that for the **required** functions using gradient descent, we use an additional argument for visualization purposes, but the function can be used without paying attention to it.
 
 The repository contains different folders: 
 - ***best_models_perf*** contains lists of accuracies on the optimized versions of each method, used for models comparison using boxplots.
@@ -30,4 +30,8 @@ The repository contains different folders:
 
 A file named ***run.py*** contains the code that was used to generate the submission featuring the best ranking on AIRCROWD.
 
+## Additional notes
+
 The data used in this project is stored in compressed format in ***data.zip***. Note that the path used to access the data will have to be adapted.
+
+The labels are under the binary form {-1,1}. The negative log likelihood loss function was derived accordingly.
