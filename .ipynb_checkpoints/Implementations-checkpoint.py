@@ -1,7 +1,7 @@
-import numpy as np
-from Secondary import*
-import matplotlib.pyplot as plt
 import math
+import numpy as np
+from Secondary import *
+import matplotlib.pyplot as plt
 
 """"""""""""""""""""""""
 "  REQUIRED FUNCTIONS  "
@@ -89,8 +89,10 @@ def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=N
     if param['Decreasing_gamma']:
         nb_gamma_update = math.floor(max_iters/100)
         gamma_mult_coeff = math.exp(math.log(param['Decreasing_gamma_final']/gamma)/nb_gamma_update)
+    y = y.reshape(-1, 1)
+    tX = tX.reshape(tX.shape[0], -1)
+    w = initial_w.reshape(-1, 1)
     losses = []
-    w = initial_w
     h = np.zeros(w.shape)
     initial_gamma = gamma
     iter = 0
@@ -99,6 +101,9 @@ def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=N
         batch_size = param['Batch_size']
         n_batch = math.floor(y.shape[0]/batch_size)
         for minibatch_y, minibatch_tX in batch_iter(y, tX, batch_size, n_batch):
+            if iter >= max_iters:
+                stop_iter = True
+                break
             loss = compute_loss_NLL(minibatch_y, minibatch_tX, w, lambda_)
             grad = compute_gradient_NLL(minibatch_y, minibatch_tX, w, lambda_)
             if param['Decreasing_gamma'] and iter % 100 == 0 and iter != 0:
@@ -113,9 +118,6 @@ def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=N
             losses.append(loss)
             if param['Print_update'] and iter % 1000 == 0:
                 print(f"Current iteration={iter}, loss={loss}")
-            if iter >= max_iters:
-                stop_iter = True
-                break
             iter += 1
     loss = compute_loss_NLL(y, tX, w, lambda_)
     if param['Print_update']: print(f"Final loss={loss}")
@@ -147,6 +149,7 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
     if param.get('Standardization', None) is None: param.update({'Standardization': True})  # standardize the data
     if param.get('Missing_to_0', None) is None: param.update({'Missing_to_0': True})  # change -999 values to 0.0
     if param.get('Missing_to_median', None) is None: param.update({'Missing_to_median': False})  # change -999 values to the median of their features
+    if param.get('Remove_outliers', None) is None: param.update({'Remove_outliers': True})
     if param.get('Build_poly', None) is None: param.update({'Build_poly': True})  # build polynomial data
     if param.get('Degree_poly', None) is None: param.update({'Degree_poly': 9})  # max degree computed when building polynomial data
     if param.get('Standardization_build_poly', None) is None: param.update({'Standardization_build_poly': False})
@@ -159,7 +162,6 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
     mat_missing = np.full(tX.shape, False)  # matrix [n_samples x n_dim] containing True when tX==-999 and False when tX!=-999
     mat_missing[np.where(tX == -999)] = True
     id_good_train = np.where(tX_train.min(axis=1) == -999.0, False, True)  # ids of samples in X_train without -999 values
-
     if param['Print_info']:
         print(f"Minimum value of X_train: {tX_train.min()}\nMaximum value of X_train: {tX_train.max()}")
         values, counts = np.unique(tX_train, return_counts=True)
@@ -185,6 +187,9 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
             tX2[mat_missing] = np.nan
             tX_mean = np.nanmean(tX2, axis=0).reshape(1,-1)
             tX_std = np.nanstd(tX2, axis=0).reshape(1,-1)
+        if param['Remove_outliers']:
+            mat_missing[tX < tX_mean - 3 * tX_std] = True
+            mat_missing[tX > tX_mean + 3 * tX_std] = True
         tX = (tX - tX_mean) / tX_std
     if param['Missing_to_0']:
         tX[mat_missing] = 0.0
@@ -209,7 +214,6 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
             tX[:,1:] = (tX[:,1:] - tX_mean) / tX_std
     tX_train = tX[:-tX_test.shape[0], :]
     tX_test = tX[-tX_test.shape[0]:,:]
-    #print(tX_train[:3,-10:])
     return y_train, tX_train, ids_train, tX_test, ids_test
 
 
@@ -232,7 +236,7 @@ def build_k_indices(y, k_fold, seed):
                  for k in range(k_fold)]
     return np.array(k_indices)
 
-def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedback = False):
+def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, params_logistic = None, feedback = False):
     """
     Function used to get training/test loss and accuracy on the kth fold during cross-validation,
     for specific parameter values, for a given model
@@ -283,12 +287,13 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedb
     elif model == 'logistic_regression':
         max_iters, gamma = params['max_iters'], params['gamma']
         initial_w=np.zeros(feat_matrix_tr.shape[1])
-        w, loss_tr = logistic_regression(y_tr, feat_matrix_tr, initial_w, max_iters, gamma)
+        w, loss_tr = logistic_regression(y_tr, feat_matrix_tr, initial_w, max_iters, gamma, param = params_logistic)
         
     
     elif model == 'reg_logistic_regression':
         lambda_, max_iters, gamma = params['lambda'], params['max_iters'], params['gamma']
-        w, loss_tr = reg_logistic_regression(y_tr, feat_matrix_tr, lambda_, initial_w, max_iters, gamma)
+        initial_w = np.zeros(feat_matrix_tr.shape[1])
+        w, loss_tr = reg_logistic_regression(y_tr, feat_matrix_tr, lambda_, initial_w, max_iters, gamma, param = params_logistic)
     
     else:
         print('Model choice incorrect, execution halted.')
@@ -302,44 +307,10 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, feedb
 
     acc_tr = compute_accuracy(y_tr, feat_matrix_tr, w)
     acc_te = compute_accuracy(y_te, feat_matrix_te, w)
+    print(loss_tr, loss_te, acc_tr, acc_te)
     return loss_tr, loss_te, acc_tr, acc_te
 
-# def learning_rate_optimization(y, x, degrees, k_fold, gammas, max_iters, model, seed=1, batch_size=1):
-#     '''
-#     Optimization of the learning rate gamma among various degrees for GD or SGD
-#     :param y: labels [n_samples]
-#     :param x: data [n_samples x n_dim]
-#     :param degrees: a list of degrees to test for the best model
-#     :param k_fold: number of folds for cross validation
-#     :param gammas: a list of learning rate to test, usually ranging from 0.1 to 2
-#     :param max_iters: the number of iterations
-#     :param model: model chosen, either 'least_squares_GD' or 'least_squares_SGD'
-#     :param seed: fixed seed for code reproducibility, by default, 1
-#     :param batch_size: the size of batch if using batch gradient descent, by default 1
-#     :return: the best learning rate, gamma and degree for gradient descent (best_gamma, best_degree, best_rmse)
-#     '''
-#     #split data in k_fold:
-#     k_indices=build_k_indices(y, k_fold, seed)
-#     # for each degree, compute the best learning rate and associated rmse:
-#     best_gammas = []
-#     best_rmse = []
-#     # varying degree:
-#     for degree in degrees:
-#         #and then performing cross-validation:
-#         test_rmse=[]
-#         for gamma in gammas:
-#             test_rmse_tab = []
-#             for k in range(k_fold):
-#                 _, loss_te = cross_validation(y, x, k_indices, k, 'least_squares_GD', degree, max_iters=max_iters, gamma=gamma, batch_size=batch_size)
-#                 test_rmse_tab.append(loss_te)
-#             test_rmse.append(np.mean(test_rmse_tab))
-#         ind=np.argmin(test_rmse)
-#         best_gammas.append(gammas[ind])
-#         best_rmse.append(test_rmse[ind])
-#     best_degree=np.argmin(best_rmse)
-#     return degrees[best_degree], best_gammas[best_degree], best_rmse[best_degree]
-
-def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = None, seed = 1, feedback = False): #max_iters, batch_size, lambda
+def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = None, params_logistic = None, seed = 1, feedback = False):
     '''
     Optimization of parameters degree and possibly lambda
     :param y: labels [n_samples]
@@ -362,7 +333,7 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
     accs_te = []
     losses_tr = []
     losses_te = []
-    #print(lambdas)
+    
     if lambdas is None:          
     # Get a mean accuracy value for each degree only
         for degree in degrees:
@@ -370,16 +341,11 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
             degree_accs_te = []
             degree_losses_tr = []
             degree_losses_te = []
-            # Adapt dictionary for cross_validation function
-            #if params is None:
-                #dict_ = {'max_iters' : max_iters, 'batch_size': batch_size}
-                #params = dict_
-            #else: params['max_iters'] = max_iters, params['batch_size']= batch_size
             # give feedback
             if feedback:
                 print('Optimizing degree {}/{}, model: {}, arguments: {}'.format(degree, np.array(degrees)[-1], model, params))
             for k in range(k_fold):
-                loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params)
+                loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params, params_logistic = params_logistic)
                 degree_accs_tr.append(acc_tr)
                 degree_accs_te.append(acc_te)
                 degree_losses_tr.append(loss_tr)
@@ -410,7 +376,7 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
                     print('Optimizing degree {}/{}, model: {}, arguments: {}'.format(degree, np.array(degrees)[-1], model, params))
                 #start cross-validating on degree-lambda pair
                 for k in range(k_fold):
-                    loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params)
+                    loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params, params_logistic = params_logistic)
                     lambda_accs_tr.append(acc_tr)
                     lambda_accs_te.append(acc_te)
                     lambda_losses_tr.append(loss_tr)

@@ -114,7 +114,6 @@ def split_data(y, tX, ratio, seed=1):
     you will have 80% of your data set dedicated to training
     and the rest dedicated to validation
     '''
-
     #set seed
     np.random.seed(seed)
 
