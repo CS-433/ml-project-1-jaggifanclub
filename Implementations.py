@@ -20,7 +20,7 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma_zero, plot=False):
         gamma, h=ada_grad(gradient, h, gamma_zero)
         w = w - gamma * gradient
         if n_iter%20==0:
-            print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
+            #print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
         if plot:
             losses.append(loss)
     if plot:
@@ -46,7 +46,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma_zero, batch_size = 1, p
         gamma, h=ada_grad(stoch_gradient, h, gamma_zero)
         w = w - gamma * stoch_gradient
         if n_iter%20==0:
-            print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
+            #print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
         if plot==True:
             losses.append(loss)
     if plot==True:
@@ -307,7 +307,6 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, param
 
     acc_tr = compute_accuracy(y_tr, feat_matrix_tr, w)
     acc_te = compute_accuracy(y_te, feat_matrix_te, w)
-    print(loss_tr, loss_te, acc_tr, acc_te)
     return loss_tr, loss_te, acc_tr, acc_te
 
 def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = None, params_logistic = None, seed = 1, feedback = False):

@@ -21,11 +21,11 @@ def plot_param_vs_err(params, err_tr, err_te, model_name = 'model', err_type = '
         best_idx = np.argmax(err_te)
     
     if param == 'lambda':
-        plt.semilogx(params, err_tr, marker=".", color='b', label='train error')
-        plt.semilogx(params, err_te, marker=".", color='r', label='test error')
+        plt.semilogx(params, err_tr, marker=".", color='b', label='train set')
+        plt.semilogx(params, err_te, marker=".", color='r', label='test set')
     else:
-        plt.plot(params, err_tr, marker=".", color='b', label='train error')
-        plt.plot(params, err_te, marker=".", color='r', label='test error')
+        plt.plot(params, err_tr, marker=".", color='b', label='train set')
+        plt.plot(params, err_te, marker=".", color='r', label='test set')
     plt.axvline(params[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
     plt.xlabel(param)
     plt.ylabel(err_type)
@@ -59,13 +59,13 @@ def plot_param_vs_loss_and_acc(params, loss_tr, loss_te, acc_tr, acc_te, model_n
     fig, axs = plt.subplots(1, 2, figsize = [12,5])
     fig.suptitle('Loss and accuracy of ' + model_name + ' given different values for parameter: ' + param)
     if param == 'lambda':
-        axs[0].semilogx(params, loss_tr, marker=".", color='b', label='train error')
-        axs[0].semilogx(params, loss_te, marker=".", color='r', label='test error')
+        axs[0].semilogx(params, loss_tr, marker=".", color='b', label='train set')
+        axs[0].semilogx(params, loss_te, marker=".", color='r', label='test set')
         axs[1].semilogx(params, acc_tr, marker=".", color='b')
         axs[1].semilogx(params, acc_te, marker=".", color='r')    
     else:
-        axs[0].plot(params, loss_tr, marker=".", color='b', label='train error')
-        axs[0].plot(params, loss_te, marker=".", color='r', label='test error')
+        axs[0].plot(params, loss_tr, marker=".", color='b', label='train set')
+        axs[0].plot(params, loss_te, marker=".", color='r', label='test set')
         axs[1].plot(params, acc_tr, marker=".", color='b')
         axs[1].plot(params, acc_te, marker=".", color='r')
     axs[0].axvline(params[best_idx_loss], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
@@ -95,10 +95,12 @@ def plot_boxplots(errors, model_names, err_type = 'MSE', save_img = False, img_n
      :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
     """
     errors = errors.T
+    plt.figure(figsize=(10,7))
     bp = plt.boxplot(errors, labels = model_names, showmeans = True)
     plt.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
     plt.title('Boxplot of the ' + err_type + ' models (' + str(np.array(errors).shape[1]) + ' folds)')
     plt.ylabel(err_type)
+    plt.xticks(rotation=90)
     if save_img:
         if img_name == '-1':
             print('Argument not found: img_name. Image not saved.')

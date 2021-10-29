@@ -1,3 +1,5 @@
+import math
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -19,11 +21,11 @@ def plot_param_vs_err(params, err_tr, err_te, model_name = 'model', err_type = '
         best_idx = np.argmax(err_te)
     
     if param == 'lambda':
-        plt.semilogx(params, err_tr, marker=".", color='b', label='train error')
-        plt.semilogx(params, err_te, marker=".", color='r', label='test error')
+        plt.semilogx(params, err_tr, marker=".", color='b', label='train set')
+        plt.semilogx(params, err_te, marker=".", color='r', label='test set')
     else:
-        plt.plot(params, err_tr, marker=".", color='b', label='train error')
-        plt.plot(params, err_te, marker=".", color='r', label='test error')
+        plt.plot(params, err_tr, marker=".", color='b', label='train set')
+        plt.plot(params, err_te, marker=".", color='r', label='test set')
     plt.axvline(params[best_idx], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
     plt.xlabel(param)
     plt.ylabel(err_type)
@@ -57,13 +59,13 @@ def plot_param_vs_loss_and_acc(params, loss_tr, loss_te, acc_tr, acc_te, model_n
     fig, axs = plt.subplots(1, 2, figsize = [12,5])
     fig.suptitle('Loss and accuracy of ' + model_name + ' given different values for parameter: ' + param)
     if param == 'lambda':
-        axs[0].semilogx(params, loss_tr, marker=".", color='b', label='train error')
-        axs[0].semilogx(params, loss_te, marker=".", color='r', label='test error')
+        axs[0].semilogx(params, loss_tr, marker=".", color='b', label='train set')
+        axs[0].semilogx(params, loss_te, marker=".", color='r', label='test set')
         axs[1].semilogx(params, acc_tr, marker=".", color='b')
         axs[1].semilogx(params, acc_te, marker=".", color='r')    
     else:
-        axs[0].plot(params, loss_tr, marker=".", color='b', label='train error')
-        axs[0].plot(params, loss_te, marker=".", color='r', label='test error')
+        axs[0].plot(params, loss_tr, marker=".", color='b', label='train set')
+        axs[0].plot(params, loss_te, marker=".", color='r', label='test set')
         axs[1].plot(params, acc_tr, marker=".", color='b')
         axs[1].plot(params, acc_te, marker=".", color='r')
     axs[0].axvline(params[best_idx_loss], color = 'k', ls = '--', alpha = 0.5, label = 'best ' + param)
@@ -93,10 +95,12 @@ def plot_boxplots(errors, model_names, err_type = 'MSE', save_img = False, img_n
      :param img_name: if the image must be saved, name demanded (in order to not erase previously saved images)
     """
     errors = errors.T
+    plt.figure(figsize=(10,7))
     bp = plt.boxplot(errors, labels = model_names, showmeans = True)
     plt.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
     plt.title('Boxplot of the ' + err_type + ' models (' + str(np.array(errors).shape[1]) + ' folds)')
     plt.ylabel(err_type)
+    plt.xticks(rotation=90)
     if save_img:
         if img_name == '-1':
             print('Argument not found: img_name. Image not saved.')
@@ -171,3 +175,82 @@ def plot_heatmap(err_tr, err_te, degrees, lambdas, model_name, measure_type = 'A
         else:
             fig.savefig('figures/' + img_name)
     plt.show()
+
+
+def plot_features_visualization(y, tX, y_pred=None, names=None, save=True, stacked_plot=True):
+    '''
+    Function used to visualize the dataset. Label y=1 is Higgs boson and label y=-1 is Other.
+    Different possiblities of plotting:
+      1) y_pred not provided                 -> 2 superimposed histograms to visualize Higgs boson and Other distributions
+      2) y_pred provided, stacked_plot=True  -> stacked area chart to observe true/false positive/negative distributions
+      3) y_pred provided, stacked_plot=False -> 2 superimposed histograms to visualize Higgs boson and Other distributions (correct/wrong predictions included)
+    :param y: true labels [n_samples]
+    :param tX: data [n_samples x n_dim]
+    :param y_pred: (optional) predicted labels [n_samples]
+                   If provided, the plots will include the true/false predictions
+    :param names: (optional) names of the parameters [n_dim]
+                  If provided, the plots will take the names as titles
+    :param save: If True, the plot will be saved at location figures/Data_visualization/...
+    :param stacked_plot: If True, the plot will be a stacked area chart (see above explanations)
+    :return: 0
+    '''
+    y = y.reshape(-1)
+    tX = tX.reshape(tX.shape[0], -1)
+    tX_positive = tX[y == 1]
+    tX_negative = tX[y == -1]
+    if y_pred is not None:
+        y_pred = y_pred.reshape(-1)
+        tX_true_positive = tX[np.logical_and(y == 1, y_pred == 1)]  # Higgs, good prediction
+        tX_false_negative = tX[np.logical_and(y == 1, y_pred == -1)]  # Higgs, bad prediction
+        tX_true_negative = tX[np.logical_and(y == -1, y_pred == -1)]  # not Higgs, good prediction
+        tX_false_positive = tX[np.logical_and(y == -1, y_pred == 1)]  # not Higgs, bad prediction
+    plt.close()
+    n_rows = math.ceil(tX.shape[1]/3)
+    fig, axs = plt.subplots(n_rows, 3, figsize=[45, n_rows*7.5])
+    fig.patch.set_facecolor('#E0E0E0')
+    bins = np.linspace(tX.min(axis=0), tX.max(axis=0), 101).T
+    for i in range(3*n_rows):
+        if n_rows > 1:
+            ax_index = (i//3, i%3)
+        else:
+            ax_index = (i%3)
+        if i >= tX.shape[1]:
+            axs[ax_index].set_visible(False)
+        else:
+            axs[ax_index].set_xlabel("parameter value")
+            axs[ax_index].set_ylabel("density")
+            if y_pred is None:
+                set5_positive = np.delete(tX_positive[:, i], np.where(tX_positive[:, i] == 0.0))
+                set6_negative = np.delete(tX_negative[:, i], np.where(tX_negative[:, i] == 0.0))
+                axs[ax_index].hist([set5_positive, set6_negative], bins=bins[i], alpha=0.8, density=True, color=['tab:blue','tab:orange'], stacked=False)
+                axs[ax_index].legend(['Higgs boson', 'Other'])
+            else:
+                set1_higgs_good = np.delete(tX_true_positive[:, i], np.where(tX_true_positive[:, i] == 0.0))
+                set2_higgs_bad = np.delete(tX_false_negative[:, i], np.where(tX_false_negative[:, i] == 0.0))
+                set3_not_good = np.delete(tX_true_negative[:, i], np.where(tX_true_negative[:, i] == 0.0))
+                set4_not_bad = np.delete(tX_false_positive[:, i], np.where(tX_false_positive[:, i] == 0.0))
+                if stacked_plot:
+                    axs[ax_index].hist([set2_higgs_bad, set4_not_bad, set3_not_good, set1_higgs_good], bins=bins[i], alpha=0.8, density=True, color=['red', 'salmon', 'tab:green', 'darkgreen'], stacked=True)
+                    axs[ax_index].legend(['Higgs boson wrongly predicted (false negative)', 'Other wrongly predicted (false positive)', 'Other correctly predicted (true negative)', 'Higgs boson correctly predicted (true positive)'])
+                else:
+                    axs[ax_index].hist([set2_higgs_bad, set1_higgs_good], bins=bins[i], alpha=0.8, density=True, align='left', rwidth=0.4, color=['darkblue','tab:blue'], stacked=True)
+                    axs[ax_index].hist([set4_not_bad, set3_not_good], bins=bins[i], alpha=0.8, density=True, align='mid', rwidth=0.4, color=['darkorange','peachpuff'], stacked=True)
+                    axs[ax_index].legend(['Higgs boson wrongly predicted (false negative)','Higgs boson correctly predicted (true positive)','Other wrongly predicted (false positive)', 'Other correctly predicted (true negative)'])
+            if names is None:
+                axs[ax_index].set_title(f"Parameter {i+1}")
+            else:
+                axs[ax_index].set_title(f"{i+1}) {names[i]}")
+    plt.show()
+    if save:
+        if os.path.isdir("figures") == False: os.makedirs("figures")
+        if os.path.isdir("figures/Data_visualization") == False: os.makedirs("figures/Data_visualization")
+        filename_already_used = True
+        index = 0
+        while filename_already_used:
+            index += 1
+            filename = f"figures/Data_visualization/data_visualization_{str(index).rjust(3,'0')}.png"
+            if os.path.isfile(filename) == False:
+                fig.savefig(filename, dpi=300)
+                filename_already_used = False
+    return 0
+
