@@ -89,6 +89,9 @@ def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=N
     if param['Decreasing_gamma']:
         nb_gamma_update = math.floor(max_iters/100)
         gamma_mult_coeff = math.exp(math.log(param['Decreasing_gamma_final']/gamma)/nb_gamma_update)
+    y = y.reshape(-1, 1)
+    tX = tX.reshape(tX.shape[0], -1)
+    w = initial_w.reshape(-1, 1)
     losses = []
     w = initial_w
     h = np.zeros(w.shape)
@@ -147,6 +150,7 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
     if param.get('Standardization', None) is None: param.update({'Standardization': True})  # standardize the data
     if param.get('Missing_to_0', None) is None: param.update({'Missing_to_0': True})  # change -999 values to 0.0
     if param.get('Missing_to_median', None) is None: param.update({'Missing_to_median': False})  # change -999 values to the median of their features
+    if param.get('Remove_outliers', None) is None: param.update({'Remove_outliers': True})
     if param.get('Build_poly', None) is None: param.update({'Build_poly': True})  # build polynomial data
     if param.get('Degree_poly', None) is None: param.update({'Degree_poly': 9})  # max degree computed when building polynomial data
     if param.get('Standardization_build_poly', None) is None: param.update({'Standardization_build_poly': False})
@@ -159,7 +163,6 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
     mat_missing = np.full(tX.shape, False)  # matrix [n_samples x n_dim] containing True when tX==-999 and False when tX!=-999
     mat_missing[np.where(tX == -999)] = True
     id_good_train = np.where(tX_train.min(axis=1) == -999.0, False, True)  # ids of samples in X_train without -999 values
-
     if param['Print_info']:
         print(f"Minimum value of X_train: {tX_train.min()}\nMaximum value of X_train: {tX_train.max()}")
         values, counts = np.unique(tX_train, return_counts=True)
@@ -185,6 +188,9 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
             tX2[mat_missing] = np.nan
             tX_mean = np.nanmean(tX2, axis=0).reshape(1,-1)
             tX_std = np.nanstd(tX2, axis=0).reshape(1,-1)
+        if param['Remove_outliers']:
+            mat_missing[tX < tX_mean - 3 * tX_std] = True
+            mat_missing[tX > tX_mean + 3 * tX_std] = True
         tX = (tX - tX_mean) / tX_std
     if param['Missing_to_0']:
         tX[mat_missing] = 0.0
@@ -209,7 +215,6 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
             tX[:,1:] = (tX[:,1:] - tX_mean) / tX_std
     tX_train = tX[:-tX_test.shape[0], :]
     tX_test = tX[-tX_test.shape[0]:,:]
-    #print(tX_train[:3,-10:])
     return y_train, tX_train, ids_train, tX_test, ids_test
 
 
