@@ -93,7 +93,6 @@ def reg_logistic_regression(y, tX, lambda_, initial_w, max_iters, gamma, param=N
     tX = tX.reshape(tX.shape[0], -1)
     w = initial_w.reshape(-1, 1)
     losses = []
-    w = initial_w
     h = np.zeros(w.shape)
     initial_gamma = gamma
     iter = 0
