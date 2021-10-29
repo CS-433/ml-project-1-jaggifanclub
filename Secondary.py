@@ -81,9 +81,14 @@ def ada_grad(gradient, h, gamma_zero):
     gamma=gamma_zero*(1/np.sqrt(h))
     return gamma, h
 
-def compute_accuracy(y, tx, w):
-    """Computes accuracy"""
-    return np.mean(y == predict_labels(w, tx))
+def compute_accuracy(y, tX, w):
+    """ Computes Accuracy """
+    if y.size == 0 or tX.size == 0: return 0.0
+    y = y.reshape(y.shape[0], -1)
+    tX = tX.reshape(tX.shape[0], -1)
+    w = w.reshape(w.shape[0], -1)
+    accuracy = np.mean(y == predict_labels(w, tX))
+    return accuracy
 
 def compute_gradient_MSE(y, tx, w):
     """Computes gradient for (stochastic) gradient descent"""
