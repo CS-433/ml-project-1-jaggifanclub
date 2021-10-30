@@ -19,7 +19,7 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma_zero, plot=False):
         gradient = compute_gradient_MSE(y, tx, w)
         gamma, h=ada_grad(gradient, h, gamma_zero)
         w = w - gamma * gradient
-        if n_iter%20==0:
+        #if n_iter%20==0:
             #print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
         if plot:
             losses.append(loss)
@@ -45,7 +45,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma_zero, batch_size = 1, p
         stoch_gradient = compute_gradient_MSE(y_sub, tx_sub, w)
         gamma, h=ada_grad(stoch_gradient, h, gamma_zero)
         w = w - gamma * stoch_gradient
-        if n_iter%20==0:
+        #if n_iter%20==0:
             #print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
         if plot==True:
             losses.append(loss)
@@ -247,6 +247,7 @@ def cross_validation(y, x, k_indices, k, model, degree = 1, params = None, param
     :param model: model name
     :param degree: degree up to which each parameter will get extended features
     :param params: dictionnary containing parameters relevant among {max_iters, gamma_zero, batch_size, lambda} for the chosen model
+    :param params_logistic: special parameters controlling the gradient descent process, used by logistic regression functions
     :param feedback: enables feedback of cross-validation progression
     """
     #Recap of the arguments entered as the function is heavy in parameters
@@ -321,6 +322,7 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas = None, params = N
     :param max_iters: number of iterations for linear or logistic regression using gradient descent, stochastic gradient descent
     :param batch_size: the size of the batch if using batch gradient descent
     :param params: dictionnary of aditional parameters necessary for the model chosen
+    :param params_logistic: special parameters controlling the gradient descent process, used by logistic regression functions
     :param seed: fixed seed for code reproducibility, by default, 1
     :param feedback: enables feedback of cross-validation progression
     :return: if lambda also optimized, 4 matrix of loss and accuracies (train, test) (degree x lambda) for each degree-lambda combination
