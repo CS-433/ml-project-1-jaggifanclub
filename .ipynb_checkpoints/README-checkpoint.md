@@ -34,4 +34,8 @@ A file named ***run.py*** contains the code that was used to generate the submis
 
 The data used in this project is stored in compressed format in ***data.zip***. Note that the path used to access the data will have to be adapted.
 
+The plotting functions generate images that were saved using the save_img boolean argument. This argument has now been set to **False** such the running the code will regenerate them in the notebook without overwriting them in the ***figure*** folder, enabling the control of reproducibility.
+
+More extensive comments and discussion of the results are available in the report.
+
 The labels are under the binary form {-1,1}. The negative log likelihood loss function was derived accordingly.
