@@ -14,6 +14,7 @@ The main file is ***project1.ipynb***. It contains the code for data visualizati
 - Ridge-regression
 - Logistic regression
 - Regularized logistic regression  
+
 These 6 methods follow a same structure in the file: cross-validated optimization over relevant parameters, and then storage of the performance with best parameter over 5 different splits for later comparison.
 
 All functions used are divided between 4 python files:
