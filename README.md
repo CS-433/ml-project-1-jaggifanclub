@@ -40,8 +40,8 @@ A file named ***run.py*** contains the code that was used to generate the submis
 
 The data used in this project is stored in compressed format in ***data.zip***. ***Note that you will have to dezip the folder data and the path used to access the data will be the following: "../data/train.csv/train.csv".***
 
-The plotting functions generate images that were saved using the save_img boolean argument. This argument has now been set to **False** such that running the code will regenerate them in the notebook without overwriting them in the ***figure*** folder, enabling the control of reproducibility.
+The plotting functions generate images that were saved using the plot_save argument, so if you want to recreate and overwrite the plots in the folder "figures/" when running the notebook, set plot_save to True. Warning: the old plots will be deleted (overwritten). This argument has now been set to **False** such that running the code will regenerate them in the notebook without overwriting them in the ***figure*** folder, enabling the control of reproducibility.
 
-More extensive comments and discussion of the results are available in the report, but most figure are only available in the ***figure*** folder (or notebook).
+More extensive comments and discussion of the results are available in the report, but most figures are only available in the ***figure*** folder (or notebook).
 
 ***Note that labels are under the binary form {-1,1}. The negative log likelihood loss function, called compute_loss_NLL was derived accordingly.***
