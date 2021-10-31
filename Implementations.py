@@ -29,7 +29,7 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma, plot=False, adagrad=Fal
     if plot:
         plt.plot(losses, '-', label="AdaGrad method")
         plt.xlabel("Number of iterations")
-        plt.ylabel("Average Test loss over the k folds for the best degree")
+        plt.ylabel("Average Train loss over the k folds for the best degree")
         plt.legend
         plt.show
     return w, loss
@@ -58,7 +58,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=F
     if plot==True:
         plt.plot(losses, '-', label="AdaGrad method")
         plt.xlabel("Number of iterations")
-        plt.ylabel("Average Test loss over the k folds for the best degree")
+        plt.ylabel("Average Train loss over the k folds for the best degree")
         plt.legend
         plt.show
     return w, loss
