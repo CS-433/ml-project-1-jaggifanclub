@@ -7,18 +7,21 @@ import matplotlib.pyplot as plt
 " REQUIRED FUNCTIONS  "
 """""""""""""""""""""""
 
-def least_squares_GD(y, tx, initial_w, max_iters, gamma, plot=False):
+def least_squares_GD(y, tx, initial_w, max_iters, gamma, plot=False, ada_grad=False):
     """Gradient descent algorithm using MSE loss."""
     # Define initial loss and weights
-    h=np.zeros(tx.shape[1])
-    w = initial_w
+    w = initial_w.reshape(-1, 1)
+    h = np.zeros(w.shape)
     loss = compute_loss_MSE(y, tx, w)
     losses=[]
     for n_iter in range(max_iters):                                    
         loss = compute_loss_MSE(y, tx, w)
         gradient = compute_gradient_MSE(y, tx, w)
-        gamma_actual, h=ada_grad(gradient, h, gamma)
-        w = w - gamma_actual * gradient
+        if ada_grad:
+            gamma_actual, h=ada_grad(gradient, h, gamma)
+            w = w - gamma_actual * gradient
+        else:
+            w = w - gamma * gradient
         # if n_iter%20==0:
         #     print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
         if plot:
@@ -31,11 +34,11 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma, plot=False):
         plt.show
     return w, loss
 
-def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=False):
+def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=False, ada_grad=False):
     """Stochastic gradient descent algorithm using MSE loss."""
     # Define parameters to store w and loss
-    h=np.zeros(tx.shape[1])
-    w = initial_w
+    w = initial_w.reshape(-1, 1)
+    h = np.zeros(w.shape)
     loss = compute_loss_MSE(y, tx, w)
     losses=[]
     for n_iter in range(max_iters):
@@ -43,8 +46,11 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=F
         y_sub, tx_sub = next(generator)
         loss = compute_loss_MSE(y_sub, tx_sub, w)
         stoch_gradient = compute_gradient_MSE(y_sub, tx_sub, w)
-        gamma_actual, h=ada_grad(stoch_gradient, h, gamma)
-        w = w - gamma_actual * stoch_gradient
+        if ada_grad:
+            gamma_actual, h=ada_grad(stoch_gradient, h, gamma)
+            w = w - gamma_actual * stoch_gradient
+        else:
+            w = w - gamma * stoch_gradient
         # if n_iter%20==0:
         #     print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
         if plot==True:
@@ -82,7 +88,7 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, param=N
     if param is None: param = {}
     if param.get('Decreasing_gamma', None) is None: param.update({'Decreasing_gamma': False})
     if param.get('Decreasing_gamma_final', None) is None: param.update({'Decreasing_gamma_final': 1e-6})
-    if param.get('AdaGrad', None) is None: param.update({'AdaGrad': True})
+    if param.get('AdaGrad', None) is None: param.update({'AdaGrad': False})
     if param.get('Newton_method', None) is None: param.update({'Newton_method': False})
     if param.get('Batch_size', None) is None: param.update({'Batch_size': 1})
     if param.get('Print_update', None) is None: param.update({'Print_update': False})

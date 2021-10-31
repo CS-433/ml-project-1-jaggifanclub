@@ -428,6 +428,9 @@ def ada_grad(gradient, h, gamma_zero):
     :param gamma_zero: initial gamma (constant)
     :return: gamma (learning rate), h (should be used for the next iteration of AdaGrad)
     '''
+    gradient = gradient.reshape(-1,1)
+    h = h.reshape(-1,1)
+    gamma_zero = gamma_zero.reshape(-1,1)
     h+=np.power(gradient, 2)
     gamma=gamma_zero*(1/np.sqrt(h))
     return gamma, h
@@ -468,13 +471,10 @@ def cross_validation(y, x, k_indices, k, model, degree=1, params=None, params_lo
     :param params_logistic: special parameters controlling the gradient descent process, used by logistic regression functions
     :param feedback: enables feedback of cross-validation progression
     """
+    params_logistic.update({'AdaGrad': True})
     # Recap of the arguments entered as the function is heavy in parameters
     if feedback:
-        print('Starting cross-validation {}/{} for {}, extended feature of degree {} and arguments : {}'.format(k + 1,
-                                                                                                                len(k_indices),
-                                                                                                                model,
-                                                                                                                degree,
-                                                                                                                params))
+        print('Starting cross-validation {}/{} for {}, extended feature of degree {} and arguments : {}'.format(k + 1,len(k_indices),model,degree,params))
 
     # Create k-th split of train/test sets, possibly with extended features
     train_folds = list(range(k_indices.shape[0]))
@@ -486,39 +486,28 @@ def cross_validation(y, x, k_indices, k, model, degree=1, params=None, params_lo
     feat_matrix_te = build_poly(x[test_idx], degree)
     y_tr = y[train_idx]
     y_te = y[test_idx]
+    initial_w = np.random.normal(0.0, 0.1, size=(feat_matrix_tr.shape[1], 1))
 
     # Use model given in parameter and initialize relevant parameters
     if model == 'least_squares':
         w, loss_tr = least_squares(y_tr, feat_matrix_tr)
-
     elif model == 'least_squares_GD':
         max_iters, plot = params['max_iters'], params['plot']
-        initial_w = np.zeros(feat_matrix_tr.shape[1])
         gamma_zero = 0.1 * np.ones(feat_matrix_tr.shape[1])
-        w, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, plot)
-
+        w, loss_tr = least_squares_GD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, plot, ada_grad=True)
     elif model == 'least_squares_SGD':
         max_iters, batch_size, plot = params['max_iters'], params['batch_size'], params['plot']
-        initial_w = np.zeros(feat_matrix_tr.shape[1])
         gamma_zero = 0.01 * np.ones(feat_matrix_tr.shape[1])
-        w, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, batch_size, plot)
-
+        w, loss_tr = least_squares_SGD(y_tr, feat_matrix_tr, initial_w, max_iters, gamma_zero, batch_size, plot, ada_grad=True)
     elif model == 'ridge_regression':
         lambda_ = params['lambda']
         w, loss_tr = ridge_regression(y_tr, feat_matrix_tr, lambda_)
-
     elif model == 'logistic_regression':
         max_iters, gamma = params['max_iters'], params['gamma']
-        initial_w = np.zeros(feat_matrix_tr.shape[1])
         w, loss_tr = logistic_regression(y_tr, feat_matrix_tr, initial_w, max_iters, gamma, param=params_logistic)
-
-
     elif model == 'reg_logistic_regression':
         lambda_, max_iters, gamma = params['lambda'], params['max_iters'], params['gamma']
-        initial_w = np.zeros(feat_matrix_tr.shape[1])
-        w, loss_tr = reg_logistic_regression(y_tr, feat_matrix_tr, lambda_, initial_w, max_iters, gamma,
-                                             param=params_logistic)
-
+        w, loss_tr = reg_logistic_regression(y_tr, feat_matrix_tr, lambda_, initial_w, max_iters, gamma, param=params_logistic)
     else:
         print('Model choice incorrect, execution halted.')
         exit()
@@ -551,6 +540,7 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas=None, params=None,
     :return: if lambda also optimized, 4 matrix of loss and accuracies (train, test) (degree x lambda) for each degree-lambda combination
              if only degree optimized, 4 vectors of loss and accuracies (train, test) (dim = degree) for each degree
     '''
+    params_logistic.update({'AdaGrad': True})
     # split data in k_fold:
     k_indices = build_k_indices(y, k_fold, seed)
     accs_tr = []
