@@ -100,7 +100,7 @@ def plot_boxplots(errors, model_names, err_type = 'Accuracy', save_img = False, 
     plt.legend([bp['medians'][0], bp['means'][0]], ['median', 'mean'])
     plt.title('Boxplot of the ' + err_type + ' models (' + str(np.array(errors).shape[0]) + ' folds)')
     plt.ylabel(err_type)
-    plt.xticks(rotation=90)
+    #plt.xticks(rotation=90)
     if save_img:
         if img_name == '-1':
             print('Argument not found: img_name. Image not saved.')
