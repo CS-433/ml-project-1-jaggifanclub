@@ -68,6 +68,8 @@ def feature_engineering(tX, param=None):
     '''
     if param is None: param = {}
 
+    if param.get('Build_all', None) is None: param.update({'Build_all': False})
+    if param['Build_all']: param.update({'Build_poly': True, 'Build_root': True, 'Build_xy': True, 'Build_inverse': False, 'Build_log': True, 'Build_sin_cos': True, 'Build_sinh_cosh': True, 'Build_rbf_gaussian': True})
     if param.get('Build_poly', None) is None: param.update({'Build_poly': False})
     if param.get('Build_poly_degree', None) is None: param.update({'Build_poly_degree': 9})
     if param.get('Build_root', None) is None: param.update({'Build_root': False})
@@ -79,9 +81,6 @@ def feature_engineering(tX, param=None):
     if param.get('Build_sin_cos_degree', None) is None: param.update({'Build_sin_cos_degree': 3})
     if param.get('Build_sinh_cosh', None) is None: param.update({'Build_sinh_cosh': False})
     if param.get('Build_rbf_gaussian', None) is None: param.update({'Build_rbf_gaussian': False})
-    if param.get('Build_all', None) is None: param.update({'Build_all': False})
-    if param['Build_all']: param.update({'Build_poly': True, 'Build_root': True, 'Build_xy': True, 'Build_inverse': True, 'Build_log': True, 'Build_sin_cos': True, 'Build_sinh_cosh': True, 'Build_rbf_gaussian': True})
-
     if tX.size == 0:
         return tX
 

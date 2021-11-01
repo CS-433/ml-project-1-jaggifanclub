@@ -173,7 +173,7 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, param=N
         gamma_mult_coeff = math.exp(math.log(param['Decreasing_gamma_final']/gamma)/nb_gamma_update)
     def check_y(y):
         if np.any(y == 0):
-            warnings.warn("This function implements equations for y={-1,1}, therefore your y={0,1} labels have been converted to y={-1,1} labels.")
+            warnings.warn("This function implements logistic equations for y={-1,1} ! Therefore you need to convert your labels to y={-1,1}.")
         y[y == 0] = -1
         return y
     y = y.reshape(-1, 1)
