@@ -16,7 +16,7 @@ The main file is ***project1.ipynb***. It contains the code for data visualizati
 - Regularized logistic regression  
 
 These 6 methods follow the same structure in the file: 
-1. Cross-validated optimization over relevant parameters that are initialized according to specific choices together with saved figures of tuned hyperparameters with respect to the corresponding accuracy, 
+1. Cross-validated optimization over relevant parameters initialized with figures of tuned hyperparameters and their corresponding accuracy, 
 2. manually set the tuned hyperparameters after optimization,
 3. cross-validation of this model over 5 different splits 
 4. and finally store the computed performance with the best parameters over the 5 different splits for later comparison.
@@ -26,6 +26,7 @@ All functions used are divided between 4 python files:
 - ***Secondary.py*** for all methods used by the principal methods but not directly in the main file (gradient/loss computation, feature creation...).
 - ***Plot.py*** for the functions used for any visualization.
 - ***proj1_helpers.py*** for provided functions, used for data loading and submissions creation.
+
 Every function features a commentary on its use, particularly extensive for the more convoluted ones.
 Note that for the **required** functions using gradient descent, we use an additional argument for visualization purposes, but the function can be used without paying attention to it.
 
@@ -38,7 +39,7 @@ A file named ***run.py*** contains the code that was used to generate the submis
 
 ## Additional notes
 
-The data used in this project is stored in compressed format in ***data.zip***. ***Note that you will have to dezip the folder data and the path used to access the data will be the following: "../data/train.csv/train.csv".***
+The data used in this project is stored in compressed format in ***data.zip***. ***Note that you will have to dezip the folder data and the path used to access the data will be the following: "data/train.csv".***
 
 The plotting functions generate images that were saved using the plot_save argument, so if you want to recreate and overwrite the plots in the folder "figures/" when running the notebook, set plot_save to True. Warning: the old plots will be deleted (overwritten). This argument has now been set to **False** such that running the code will regenerate them in the notebook without overwriting them in the ***figure*** folder, enabling the control of reproducibility.
 
