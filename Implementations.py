@@ -1,4 +1,5 @@
 import math
+import warnings
 import numpy as np
 from Secondary import *
 import matplotlib.pyplot as plt
@@ -8,7 +9,17 @@ import matplotlib.pyplot as plt
 """""""""""""""""""""""
 
 def least_squares_GD(y, tx, initial_w, max_iters, gamma, plot=False, adagrad=False):
-    """Gradient descent algorithm using MSE loss."""
+    '''
+    Gradient descent algorithm using MSE loss.
+    :param y: labels
+    :param tx: data
+    :param initial_w: weights
+    :param max_iters: total number of iterations
+    :param gamma: learning rate
+    :param plot: plot the training loss
+    :param adagrad: use AdaGrad implementation of the learning rate
+    :return: optimized weights, final loss
+    '''
     # Define initial loss and weights
     w = initial_w.reshape(-1, 1)
     h = np.zeros(w.shape)
@@ -38,7 +49,18 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma, plot=False, adagrad=Fal
     return w, loss
 
 def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=False, adagrad=False):
-    """Stochastic gradient descent algorithm using MSE loss."""
+    '''
+    Stochastic gradient descent algorithm using MSE loss.
+    :param y: labels
+    :param tx: data
+    :param initial_w: weights
+    :param max_iters: total number of iterations
+    :param gamma: learning rate
+    :param batch_size: batch size, default is 1 (SGD)
+    :param plot: plot the training loss
+    :param adagrad: use AdaGrad implementation of the learning rate
+    :return: optimized weights, final loss
+    '''
     # Define parameters to store w and loss
     w = initial_w.reshape(-1, 1)
     h = np.zeros(w.shape)
@@ -70,7 +92,12 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=F
     return w, loss
 
 def least_squares(y, tx):
-    """Calculates the least squares solution."""
+    '''
+    Calculates the least squares solution.
+    :param y: labels
+    :param tx: data
+    :return: optimized weights, final loss
+    '''
     a = tx.T.dot(tx)
     b = tx.T.dot(y)
     w = np.linalg.solve(a,b)
@@ -78,7 +105,13 @@ def least_squares(y, tx):
     return w, loss
 
 def ridge_regression(y, tx, lambda_):
-    """Calculates the least squares solution with ridge constrain."""
+    '''
+    Calculates the least squares solution with ridge constrain.
+    :param y: labels
+    :param tx: data
+    :param lambda_: regularization term (lambda)
+    :return: optimized weights, final loss
+    '''
     a = tx.T.dot(tx) + 2 * y.size * lambda_ * np.identity(tx.shape[1])
     b = tx.T.dot(y)
     w_star = np.linalg.solve(a,b)
@@ -86,11 +119,42 @@ def ridge_regression(y, tx, lambda_):
     return w_star, loss
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma, param=None):
-    ''' Logistic regression using gradient descent or SGD '''
+    '''
+    Logistic regression using gradient descent or SGD
+    :param y: labels
+    :param tx: data
+    :param initial_w: weights
+    :param max_iters: total number of iterations
+    :param gamma: learning rate
+    :param param: additional parameters
+              default: {'Decreasing_gamma': False      | Use decreasing gamma as learning rate
+                        'Decreasing_gamma_final': 1e-6 | Final learning rate for decreasing gamma
+                        'AdaGrad': False               | Use AdaGrad as learning rate
+                        'Newton_method': False         | Use Newton method to upgrade the weights
+                        'Batch_size': 1                | Batch size used (default is 1: SGD)
+                        'Print_update': False}         | Print the update informations
+    :return: optimized weights, final loss
+    '''
     return reg_logistic_regression(y, tx, 0.0, initial_w, max_iters, gamma, param)
 
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, param=None):
-    ''' Regularized logistic regression using gradient descent or SGD '''
+    '''
+    Regularized logistic regression using gradient descent or SGD.
+    :param y: labels
+    :param tx: data
+    :param lambda_: regularization term (lambda)
+    :param initial_w: weights
+    :param max_iters: total number of iterations
+    :param gamma: learning rate
+    :param param: additional parameters
+                  default: {'Decreasing_gamma': False      | Use decreasing gamma as learning rate
+                            'Decreasing_gamma_final': 1e-6 | Final learning rate for decreasing gamma
+                            'AdaGrad': False               | Use AdaGrad as learning rate
+                            'Newton_method': False         | Use Newton method to upgrade the weights
+                            'Batch_size': 1                | Batch size used (default is 1: SGD)
+                            'Print_update': False}         | Print the update informations
+    :return: optimized weights, final loss
+    '''
     if param is None: param = {}
     if param.get('Decreasing_gamma', None) is None: param.update({'Decreasing_gamma': False})
     if param.get('Decreasing_gamma_final', None) is None: param.update({'Decreasing_gamma_final': 1e-6})
@@ -101,7 +165,13 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, param=N
     if param['Decreasing_gamma']:
         nb_gamma_update = math.floor(max_iters/100)
         gamma_mult_coeff = math.exp(math.log(param['Decreasing_gamma_final']/gamma)/nb_gamma_update)
+    def check_y(y):
+        if np.any(y == 0):
+            warnings.warn("This function implements equations for y={-1,1}, therefore your y={0,1} labels have been converted to y={-1,1} labels.")
+        y[y == 0] = -1
+        return y
     y = y.reshape(-1, 1)
+    y = check_y(y)
     tx = tx.reshape(tx.shape[0], -1)
     w = initial_w.reshape(-1, 1)
     h = np.zeros(w.shape)
@@ -168,6 +238,8 @@ def cross_validation(y, x, k_indices, k, model, degree=1, params=None, params_lo
     :param params: dictionnary containing parameters relevant among {max_iters, gamma_zero, batch_size, lambda} for the chosen model
     :param params_logistic: special parameters controlling the gradient descent process, used by logistic regression functions
     :param feedback: enables feedback of cross-validation progression
+    :param x_poly_built: True if x already contains polynomial expansion
+    :param x_poly_deg: degree of the already computed polynomial expansion of x (if x_poly_built=True)
     """
     # Recap of the arguments entered as the function is heavy in parameters
     if feedback:
