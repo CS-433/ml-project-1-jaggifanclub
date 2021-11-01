@@ -31,7 +31,7 @@ Note that for the **required** functions using gradient descent, we use an addit
 
 The repository contains different folders: 
 - ***best_models_perf*** contains lists of accuracies on the optimized versions of each method, used for models comparison using boxplots.
-- ***submissions*** contains different submissions that were posted on AIRCROWD.
+- ***Results*** contains different submissions that were posted on AIRCROWD.
 - ***figures*** contains different figures generated to visualize and help assessing models performance.
 
 A file named ***run.py*** contains the code that was used to generate the submission featuring the best ranking on AIRCROWD.
