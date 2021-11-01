@@ -67,7 +67,6 @@ def feature_engineering(tX, param=None):
     :return: feature engineered data [n_samples x ...] with the bias column
     '''
     if param is None: param = {}
-    param = {}
 
     if param.get('Build_poly', None) is None: param.update({'Build_poly': False})
     if param.get('Build_poly_degree', None) is None: param.update({'Build_poly_degree': 9})
@@ -171,7 +170,7 @@ def preprocess_data(y_train, tX_train, ids_train, tX_test, ids_test, param=None)
     if param.get('Standardization', None) is None: param.update({'Standardization': True})  # standardize the data
     if param.get('Normalization_min_max', None) is None: param.update({'Normalization_min_max': False})  # normalize the data with min and max -> data values will be between 0.0 and 1.0
     if param.get('Remove_outliers', None) is None: param.update({'Remove_outliers': True})  # change the values of outliers (no deleting)
-    if param.get('Remove_outliers_std_limit', None) is None: param.update({'Remove_outliers_std_limit': 6.0})  # condition to consider a value as outlier: z-score > 6.0 from the mean (number of std difference from the mean allowed)
+    if param.get('Remove_outliers_std_limit', None) is None: param.update({'Remove_outliers_std_limit': 3.0})  # condition to consider a value as outlier: z-score > 6.0 from the mean (number of std difference from the mean allowed)
     if param.get('Missing_to_0', None) is None: param.update({'Missing_to_0': False})  # change missing values (-999) and outliers values (if 'Remove_outliers'=True) to 0.0 (0.0 is also the mean if 'Standardization'=True)
     if param.get('Missing_to_median', None) is None: param.update({'Missing_to_median': True})  # change missing values (-999) and outliers values (if 'Remove_outliers'=True) to the median of their parameter
     if param['Missing_to_0'] == False and param['Missing_to_median'] == False: param['Missing_to_median'] = True  # one of these two parameters has to be True

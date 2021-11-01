@@ -12,26 +12,29 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma, plot=False, adagrad=Fal
     # Define initial loss and weights
     w = initial_w.reshape(-1, 1)
     h = np.zeros(w.shape)
-    loss = compute_loss_MSE(y, tx, w)
-    losses=[]
-    for n_iter in range(max_iters):                                    
+    if plot:
         loss = compute_loss_MSE(y, tx, w)
+        losses = [loss]
+        iters = [0]
+    for n_iter in range(max_iters):
         gradient = compute_gradient_MSE(y, tx, w)
         if adagrad:
-            gamma_actual, h=ada_grad(gradient, h, gamma)
+            gamma_actual, h = ada_grad(gradient, h, gamma)
             w = w - gamma_actual * gradient
         else:
             w = w - gamma * gradient
-        if n_iter%100==0 or n_iter == max_iters-1:
-            print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
-        if plot:
+        if plot and n_iter % 10 == 0:
+            loss = compute_loss_MSE(y, tx, w)
             losses.append(loss)
+            iters.append(n_iter+1)
+            # print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
     if plot:
-        plt.plot(losses, '-', label="AdaGrad method")
+        plt.plot(iters, losses, '-', label="AdaGrad method")
         plt.xlabel("Number of iterations")
         plt.ylabel("Average Train loss over the k folds for the best degree")
         plt.legend
         plt.show
+    loss = compute_loss_MSE(y, tx, w)
     return w, loss
 
 def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=False, adagrad=False):
@@ -39,28 +42,31 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=F
     # Define parameters to store w and loss
     w = initial_w.reshape(-1, 1)
     h = np.zeros(w.shape)
-    loss = compute_loss_MSE(y, tx, w)
-    losses=[]
+    if plot:
+        loss = compute_loss_MSE(y, tx, w)
+        losses = [loss]
+        iters = [0]
     for n_iter in range(max_iters):
         generator = batch_iter(y, tx, batch_size)
         y_sub, tx_sub = next(generator)
-        loss = compute_loss_MSE(y, tx, w)
         stoch_gradient = compute_gradient_MSE(y_sub, tx_sub, w)
         if adagrad:
             gamma_actual, h=ada_grad(stoch_gradient, h, gamma)
             w = w - gamma_actual * stoch_gradient
         else:
             w = w - gamma * stoch_gradient
-        if n_iter%100==0 or n_iter == max_iters-1:
-            print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
-        if plot==True:
+        if plot and n_iter % 10 == 0:
+            loss = compute_loss_MSE(y, tx, w)
             losses.append(loss)
-    if plot==True:
-        plt.plot(losses, '-', label="AdaGrad method")
+            iters.append(n_iter+1)
+            # print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
+    if plot:
+        plt.plot(iters, losses, '-', label="AdaGrad method")
         plt.xlabel("Number of iterations")
         plt.ylabel("Average Train loss over the k folds for the best degree")
         plt.legend
         plt.show
+    loss = compute_loss_MSE(y, tx, w)
     return w, loss
 
 def least_squares(y, tx):
@@ -109,7 +115,6 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, param=N
             if iter >= max_iters:
                 stop_iter = True
                 break
-            loss = compute_loss_NLL(y, tx, w, lambda_)
             grad = compute_gradient_NLL(minibatch_y, minibatch_tX, w, lambda_)
             if param['Decreasing_gamma'] and iter % 100 == 0 and iter != 0:
                 gamma = gamma_mult_coeff*gamma
@@ -121,6 +126,7 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, param=N
             else:
                 w = w - gamma*grad
             if param['Print_update'] and iter % 100 == 0:
+                loss = compute_loss_NLL(y, tx, w, lambda_)
                 print(f"Current iteration={iter}, loss={loss}")
             iter += 1
     loss = compute_loss_NLL(y, tx, w, lambda_)
@@ -149,7 +155,7 @@ def build_k_indices(y, k_fold, seed):
                  for k in range(k_fold)]
     return np.array(k_indices)
 
-def cross_validation(y, x, k_indices, k, model, degree=1, params=None, params_logistic=None, feedback=False):
+def cross_validation(y, x, k_indices, k, model, degree=1, params=None, params_logistic=None, feedback=False, x_poly_built=False, x_poly_deg=16):
     """
     Function used to get training/test loss and accuracy on the kth fold during cross-validation,
     for specific parameter values, for a given model
@@ -173,8 +179,16 @@ def cross_validation(y, x, k_indices, k, model, degree=1, params=None, params_lo
     train_idx = np.concatenate(([k_indices[fold, :] for fold in train_folds]))
     test_idx = k_indices[k, :]
 
-    feat_matrix_tr = build_poly(x[train_idx], degree)
-    feat_matrix_te = build_poly(x[test_idx], degree)
+    if x_poly_built == False:
+        feat_matrix_tr = build_poly(x[train_idx], degree)
+        feat_matrix_te = build_poly(x[test_idx], degree)
+    else:
+        new_x = x[:,0].reshape(-1,1)
+        for d in range(1, degree+1):
+            new_x = np.hstack((new_x, x[:,d::x_poly_deg]))
+        feat_matrix_tr = new_x[train_idx]
+        feat_matrix_te = new_x[test_idx]
+
     y_tr = y[train_idx]
     y_te = y[test_idx]
     initial_w = np.random.normal(0.0, 0.1, size=(feat_matrix_tr.shape[1], 1))
@@ -238,6 +252,14 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas=None, params=None,
     losses_tr = []
     losses_te = []
 
+    if type(degrees) is list:
+        max_degree = max(degrees)
+    elif type(degrees) is np.ndarray:
+        max_degree = np.max(degrees)
+    else:
+        max_degree = 20
+    x = build_poly(x, max_degree)
+
     if lambdas is None:
         # Get a mean accuracy value for each degree only
         for degree in degrees:
@@ -249,7 +271,7 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas=None, params=None,
             if feedback:
                 print('Optimizing degree {}/{}, model: {}, arguments: {}'.format(degree, np.array(degrees)[-1], model,params))
             for k in range(k_fold):
-                loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params,params_logistic=params_logistic)
+                loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params,params_logistic=params_logistic, x_poly_built=True, x_poly_deg=max_degree)
                 degree_accs_tr.append(acc_tr)
                 degree_accs_te.append(acc_te)
                 degree_losses_tr.append(loss_tr)
@@ -282,7 +304,7 @@ def params_optimization(y, x, k_fold, model, degrees, lambdas=None, params=None,
                                                                                    params))
                 # start cross-validating on degree-lambda pair
                 for k in range(k_fold):
-                    loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params,params_logistic=params_logistic)
+                    loss_tr, loss_te, acc_tr, acc_te = cross_validation(y, x, k_indices, k, model, degree, params,params_logistic=params_logistic, x_poly_built=True, x_poly_deg=max_degree)
                     lambda_accs_tr.append(acc_tr)
                     lambda_accs_te.append(acc_te)
                     lambda_losses_tr.append(loss_tr)
