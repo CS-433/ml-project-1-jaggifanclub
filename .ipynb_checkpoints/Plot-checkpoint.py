@@ -3,10 +3,6 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-"""""""""""""""""""""""
-" PLOTTING FUNCTIONS  "
-"""""""""""""""""""""""
-
 def plot_param_vs_err(params, err_tr, err_te, model_name = 'model', err_type = 'MSE', param = 'degree', save_img = False, img_name = '-1'):
     """
     Visualization of the curves of mse/accuracy given parameter (degree, lambda or other).
@@ -180,6 +176,7 @@ def plot_heatmap(err_tr, err_te, degrees, lambdas, model_name, measure_type = 'A
             fig.savefig('figures/' + img_name)
     plt.show()
 
+
 def plot_features_visualization(y, tX, y_pred=None, names=None, save=True, stacked_plot=True):
     '''
     Function used to visualize the dataset. Label y=1 is Higgs boson and label y=-1 is Other.
@@ -223,21 +220,15 @@ def plot_features_visualization(y, tX, y_pred=None, names=None, save=True, stack
             axs[ax_index].set_xlabel("parameter value")
             axs[ax_index].set_ylabel("density")
             if y_pred is None:
-                set5_mode = np.unique(tX_positive[:,i], return_counts=True)[0][np.unique(tX_positive[:,i], return_counts=True)[1].argmax()]
-                set6_mode = np.unique(tX_negative[:, i], return_counts=True)[0][np.unique(tX_negative[:, i], return_counts=True)[1].argmax()]
-                set5_positive = np.delete(tX_positive[:, i], np.where(tX_positive[:, i] == set5_mode))
-                set6_negative = np.delete(tX_negative[:, i], np.where(tX_negative[:, i] == set6_mode))
+                set5_positive = np.delete(tX_positive[:, i], np.where(tX_positive[:, i] == 0.0))
+                set6_negative = np.delete(tX_negative[:, i], np.where(tX_negative[:, i] == 0.0))
                 axs[ax_index].hist([set5_positive, set6_negative], bins=bins[i], alpha=0.8, density=True, color=['tab:blue','tab:orange'], stacked=False)
                 axs[ax_index].legend(['Higgs boson', 'Other'])
             else:
-                set1_mode = np.unique(tX_true_positive[:,i], return_counts=True)[0][np.unique(tX_true_positive[:,i], return_counts=True)[1].argmax()]
-                set2_mode = np.unique(tX_false_negative[:, i], return_counts=True)[0][np.unique(tX_false_negative[:, i], return_counts=True)[1].argmax()]
-                set3_mode = np.unique(tX_true_negative[:,i], return_counts=True)[0][np.unique(tX_true_negative[:,i], return_counts=True)[1].argmax()]
-                set4_mode = np.unique(tX_false_positive[:, i], return_counts=True)[0][np.unique(tX_false_positive[:, i], return_counts=True)[1].argmax()]
-                set1_higgs_good = np.delete(tX_true_positive[:, i], np.where(tX_true_positive[:, i] == set1_mode))
-                set2_higgs_bad = np.delete(tX_false_negative[:, i], np.where(tX_false_negative[:, i] == set2_mode))
-                set3_not_good = np.delete(tX_true_negative[:, i], np.where(tX_true_negative[:, i] == set3_mode))
-                set4_not_bad = np.delete(tX_false_positive[:, i], np.where(tX_false_positive[:, i] == set4_mode))
+                set1_higgs_good = np.delete(tX_true_positive[:, i], np.where(tX_true_positive[:, i] == 0.0))
+                set2_higgs_bad = np.delete(tX_false_negative[:, i], np.where(tX_false_negative[:, i] == 0.0))
+                set3_not_good = np.delete(tX_true_negative[:, i], np.where(tX_true_negative[:, i] == 0.0))
+                set4_not_bad = np.delete(tX_false_positive[:, i], np.where(tX_false_positive[:, i] == 0.0))
                 if stacked_plot:
                     axs[ax_index].hist([set2_higgs_bad, set4_not_bad, set3_not_good, set1_higgs_good], bins=bins[i], alpha=0.8, density=True, color=['red', 'salmon', 'tab:green', 'darkgreen'], stacked=True)
                     axs[ax_index].legend(['Higgs boson wrongly predicted (false negative)', 'Other wrongly predicted (false positive)', 'Other correctly predicted (true negative)', 'Higgs boson correctly predicted (true positive)'])
@@ -262,3 +253,4 @@ def plot_features_visualization(y, tX, y_pred=None, names=None, save=True, stack
                 fig.savefig(filename, dpi=300)
                 filename_already_used = False
     return 0
+
