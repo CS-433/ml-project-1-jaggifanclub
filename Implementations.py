@@ -68,20 +68,26 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1, plot=F
         loss = compute_loss_MSE(y, tx, w)
         losses = [loss]
         iters = [0]
-    for n_iter in range(max_iters):
-        generator = batch_iter(y, tx, batch_size)
-        y_sub, tx_sub = next(generator)
-        stoch_gradient = compute_gradient_MSE(y_sub, tx_sub, w)
-        if adagrad:
-            gamma_actual, h=ada_grad(stoch_gradient, h, gamma)
-            w = w - gamma_actual * stoch_gradient
-        else:
-            w = w - gamma * stoch_gradient
-        if plot and n_iter % 10 == 0:
-            loss = compute_loss_MSE(y, tx, w)
-            losses.append(loss)
-            iters.append(n_iter+1)
-            # print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
+    n_iter = 0
+    stop_iter = False
+    while n_iter < max_iters and stop_iter == False:
+        n_batch = math.floor(y.shape[0] / batch_size)
+        for minibatch_y, minibatch_tX in batch_iter(y, tx, batch_size, n_batch):
+            if n_iter >= max_iters:
+                stop_iter = True
+                break
+            stoch_gradient = compute_gradient_MSE(minibatch_y, minibatch_tX, w)
+            if adagrad:
+                gamma_actual, h=ada_grad(stoch_gradient, h, gamma)
+                w = w - gamma_actual * stoch_gradient
+            else:
+                w = w - gamma * stoch_gradient
+            if plot and n_iter % 10 == 0:
+                loss = compute_loss_MSE(y, tx, w)
+                losses.append(loss)
+                iters.append(n_iter+1)
+                # print("Gradient Descent({bi}/{ti}): loss ={l}, w0={w0}, w1={w1}".format(bi=n_iter, ti=max_iters - 1, l=np.round(loss,4), w0=np.round(w[0],4), w1=np.round(w[1],4)))
+            n_iter += 1
     if plot:
         plt.plot(iters, losses, '-', label="AdaGrad method")
         plt.xlabel("Number of iterations")
